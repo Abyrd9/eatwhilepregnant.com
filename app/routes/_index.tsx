@@ -1,4 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
+import { useState } from "react";
+import { LuCornerDownLeft, LuSearch } from "react-icons/lu";
+import { InputComposer } from "~/primitives/input";
+import { cx } from "~/utils/helpers/cx";
 
 export const meta: MetaFunction = () => {
   return [
@@ -8,34 +12,35 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
+  const [search, setSearch] = useState<string>();
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
+    <div className="h-dvh w-dvw flex flex-col justify-center items-center">
+      <div className="w-full max-w-[400px]">
+        <InputComposer className="w-full grid grid-cols-[24px_1fr_54px]">
+          <div>
+            <LuSearch className="text-slate-700" />
+          </div>
+          <InputComposer.Input
+            className="w-full"
+            placeholder="Watermelon, Deli Meat, fish, etc."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div
+            className={cx(
+              "flex items-center space-x-1 justify-end text-gray-400",
+              {
+                "opacity-0": !search,
+                "opacity-100": search,
+              }
+            )}
           >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+            <span className="text-xs">Enter</span>
+            <LuCornerDownLeft className="text-xs" />
+          </div>
+        </InputComposer>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,9 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import "./tailwind.css";
+import "@fontsource-variable/rubik/wght.css";
+import "@fontsource-variable/rubik/wght-italic.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
