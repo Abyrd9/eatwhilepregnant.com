@@ -8,10 +8,14 @@
     "dev": "remix vite:dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "remix-serve ./build/server/index.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "types:generate": "npx supabase gen types typescript --project-id wruwdrunktdgdfstqjkg --schema public > app/utils/types/supabase.ts"
   },
   "dependencies": {
+    "@conform-to/react": "^1.0.5",
+    "@conform-to/zod": "^1.0.5",
     "@fontsource-variable/rubik": "^5.0.21",
+    "@radix-ui/react-label": "^2.0.2",
     "@remix-run/node": "^2.8.1",
     "@remix-run/react": "^2.8.1",
     "@remix-run/serve": "^2.8.1",
