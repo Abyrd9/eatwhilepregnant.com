@@ -10,7 +10,7 @@ import { z } from "zod";
 
 const AiResponseSchema = z.object({
   food: z.string(),
-  is_safe: z.enum(["green", "yellow", "red"]),
+  is_safe: z.enum(["green", "yellow", "red", "undefined"]),
   note: z.string(),
 });
 
@@ -63,6 +63,17 @@ export const search: ActionFunction = async ({ request }) => {
       const content = AiResponseSchema.parse(
         JSON.parse(choice.message.content)
       );
+
+      if (content.is_safe === "undefined") {
+        return json<SearchFormActionData>({
+          status: "error",
+          submission: data.reply({
+            fieldErrors: {
+              search: [content.note],
+            },
+          }),
+        });
+      }
 
       const result = await openai.embeddings.create({
         input: content.food,
