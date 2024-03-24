@@ -50,19 +50,34 @@ export type Database = {
         }
         Returns: unknown
       }
-      match_documents: {
-        Args: {
-          query_embedding: string
-          match_threshold: number
-        }
-        Returns: {
-          content: string | null
-          embedding: string
-          id: number
-          is_safe: Database["public"]["Enums"]["is_safe"] | null
-          search: string
-        }[]
-      }
+      match_documents:
+        | {
+            Args: {
+              query_embedding: string
+              match_threshold: number
+            }
+            Returns: {
+              content: string | null
+              embedding: string
+              id: number
+              is_safe: Database["public"]["Enums"]["is_safe"] | null
+              search: string
+            }[]
+          }
+        | {
+            Args: {
+              query_embedding: string
+              match_threshold: number
+              match_count: number
+            }
+            Returns: {
+              content: string | null
+              embedding: string
+              id: number
+              is_safe: Database["public"]["Enums"]["is_safe"] | null
+              search: string
+            }[]
+          }
       vector_avg: {
         Args: {
           "": number[]
