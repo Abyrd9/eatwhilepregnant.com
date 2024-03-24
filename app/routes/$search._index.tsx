@@ -1,5 +1,6 @@
 import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
+import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
 import { cx } from "~/utils/helpers/cx";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import { Database } from "~/utils/types/supabase";
@@ -49,32 +50,35 @@ export default function Index() {
 
   return (
     <>
-      <div className="w-full max-w-[300px] h-px bg-gray-200 my-6" />
-
-      <div className="w-full">
+      <div className="w-full pb-8">
         {document.is_safe && (
           <div
             className={cx(
-              "px-2 py-1 rounded-md w-fit font-semibold text-sm uppercase flex items-center space-x-1.5",
+              "p-2 font-medium rounded-md tracking-wide uppercase flex items-center space-x-2 w-full border",
               {
-                "text-yellow-500 bg-yellow-100": document.is_safe === "yellow",
-                "text-red-500 bg-red-100": document.is_safe === "red",
-                "text-green-500 bg-green-100": document.is_safe === "green",
+                "text-yellow-500 bg-yellow-50 border-yellow-200":
+                  document.is_safe === "yellow",
+                "text-red-500 bg-red-50 border-red-200":
+                  document.is_safe === "red",
+                "text-green-500 bg-green-50 border-green-200":
+                  document.is_safe === "green",
               }
             )}
           >
-            <div
-              className={cx("w-3 h-3  rounded-full", {
-                "bg-yellow-500": document.is_safe === "yellow",
-                "bg-red-500": document.is_safe === "red",
-                "bg-green-500": document.is_safe === "green",
-              })}
-            />
-            <span className="translate-y-px">
+            <span>
+              {document.is_safe === "green" ? (
+                <FiCheckCircle className="text-lg" />
+              ) : document.is_safe === "red" ? (
+                <FiXOctagon className="text-lg" />
+              ) : document.is_safe === "yellow" ? (
+                <FiAlertTriangle className="text-lg" />
+              ) : null}
+            </span>
+            <span className="text-base">
               {document.is_safe === "green"
                 ? "safe to eat"
                 : document.is_safe === "red"
-                  ? "unsafe to eat"
+                  ? "do not eat"
                   : document.is_safe === "yellow"
                     ? "proceed with caution"
                     : null}

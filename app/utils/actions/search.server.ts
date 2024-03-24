@@ -75,6 +75,15 @@ export const search: ActionFunction = async ({ request }) => {
         });
       }
 
+      // Let's check if the word that was pulled out is a food item we already have in the DB
+      const { data: existing } = await client
+        .from("documents")
+        .select("*")
+        .eq("search", content.food.toLowerCase())
+        .single();
+
+      if (existing) return redirect(`/${existing.search}`);
+
       const result = await openai.embeddings.create({
         input: content.food,
         model: "text-embedding-3-small",

@@ -18,6 +18,6 @@
   }
 
   body {
-    @apply flex min-h-dvh flex-col font-sans m-0 bg-slate-50 text-slate-700;
+    @apply flex min-h-dvh flex-col font-sans m-0 bg-slate-100 text-slate-700;
   }
 }
