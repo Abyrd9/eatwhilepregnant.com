@@ -1,7 +1,7 @@
 import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json, redirect } from "@remix-run/node";
-import { getOpenAi } from "../helpers/openai.server";
-import { getSupabaseClient } from "../helpers/supabase.server";
+import { getOpenAi } from "~/utils/helpers/openai.server";
+import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import {
   SearchFormActionData,
   SearchFormSchema,
@@ -14,7 +14,7 @@ const AiResponseSchema = z.object({
   note: z.string(),
 });
 
-export const search: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const { client } = await getSupabaseClient(request);
   const form = await request.clone().formData();
   const data = parseWithZod(form, { schema: SearchFormSchema });
