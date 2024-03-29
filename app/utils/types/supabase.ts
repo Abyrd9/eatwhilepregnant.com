@@ -33,6 +33,38 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          created_at: string
+          document_id: number
+          feedback: string
+          food: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          document_id: number
+          feedback: string
+          food: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          document_id?: number
+          feedback?: string
+          food?: string
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_feedback_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -116,7 +148,7 @@ export type Database = {
       }
     }
     Enums: {
-      is_safe: "green" | "red" | "yellow"
+      is_safe: "1" | "2" | "3" | "4"
     }
     CompositeTypes: {
       [_ in never]: never

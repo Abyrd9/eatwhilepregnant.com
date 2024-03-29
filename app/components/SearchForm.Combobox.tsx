@@ -79,7 +79,7 @@ export const SearchFormCombobox = ({
         What can I eat while pregnant?
       </ComboboxLabel>
 
-      <div className="relative w-full items-center overflow-clip rounded-md border border-black/10 py-2 text-zinc-700 shadow-input shadow-black/[8%] ring-blue-700 ring-offset-2 after:pointer-events-none after:absolute after:-inset-y-[0.25px] after:left-0 after:h-[calc(100%_+_4px)] after:w-full after:rounded-md focus-within:border-black/10 dark:bg-stone-900 dark:shadow-black/10 dark:ring-muted-zinc-700/10 dark:after:shadow-highlight dark:after:shadow-white/[2%] [&:has(:focus-visible)]:ring-2 [&:has(input:is(:disabled))]:opacity-50 bg-white z-50">
+      <div className="relative w-full items-center overflow-clip rounded-md border border-black/10 py-2 text-zinc-700 shadow-input shadow-black/[8%] ring-blue-700 ring-offset-2 after:pointer-events-none after:absolute after:-inset-y-[0.25px] after:left-0 after:h-[calc(100%_+_4px)] after:w-full after:rounded-md focus-within:border-black/10 dark:bg-stone-900 dark:shadow-black/10 dark:ring-muted-zinc-700/10 dark:after:shadow-highlight dark:after:shadow-white/[2%] [&:has(:focus-visible)]:ring-2 [&:has(input:is(:disabled))]:opacity-50 bg-white">
         <div className="absolute left-3 top-0 flex items-center justify-center h-full w-[16px]">
           <FiSearch className="text-slate-700" />
         </div>

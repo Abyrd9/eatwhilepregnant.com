@@ -10,23 +10,22 @@ type ImageHeadingsProps = ComponentPropsWithoutRef<"div">;
 export const ImageHeadings = ({ className, ...props }: ImageHeadingsProps) => {
   return (
     <div {...props} className={cx("relative", className)}>
-      <img src={logo} alt="logo" className="max-w-[224px]" />
+      <img src={logo} alt="logo" className="max-w-[160px] sm:max-w-[224px]" />
 
       <img
         src={coffee}
         alt="coffee"
-        className="absolute top-[150px] -rotate-[14deg] -left-[120px] max-w-[100px]"
-      />
-
-      <img
-        src={sushi}
-        alt="sushi"
-        className="absolute top-[180px] -right-[90px] rotate-[6deg]  max-w-[80px] z-20"
+        className="absolute sm:top-[150px] -rotate-[14deg] sm:-left-[120px] sm:max-w-[100px] max-w-[80px] top-[110px] -left-[90px]"
       />
       <img
         src={pineapple}
         alt="pineapple"
-        className="absolute top-[120px] -right-[140px] rotate-[14deg]  max-w-[70px] z-10"
+        className="absolute sm:top-[120px] sm:-right-[140px] rotate-[14deg]  sm:max-w-[70px] max-w-[60px] top-[80px] -right-[116px]"
+      />
+      <img
+        src={sushi}
+        alt="sushi"
+        className="absolute sm:top-[180px] sm:-right-[90px] rotate-[6deg]  sm:max-w-[80px] top-[130px] max-w-[70px] -right-[74px] "
       />
     </div>
   );

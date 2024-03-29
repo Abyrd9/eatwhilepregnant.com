@@ -12,10 +12,12 @@
     "types:generate": "npx supabase gen types typescript --project-id wruwdrunktdgdfstqjkg --schema public > app/utils/types/supabase.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.19.0",
     "@ariakit/react": "^0.4.4",
     "@conform-to/react": "^1.0.5",
     "@conform-to/zod": "^1.0.5",
     "@fontsource-variable/rubik": "^5.0.21",
+    "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-label": "^2.0.2",
     "@remix-run/node": "^2.8.1",
     "@remix-run/react": "^2.8.1",
@@ -26,6 +28,7 @@
     "@uidotdev/usehooks": "^2.4.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "cmdk": "^1.0.0",
     "install": "^0.13.0",
     "isbot": "^4.1.0",
     "npm": "^10.5.0",

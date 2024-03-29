@@ -1,18 +1,22 @@
 import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json, redirect } from "@remix-run/node";
-import { getOpenAi } from "~/utils/helpers/openai.server";
+// import { getOpenAi } from "~/utils/helpers/openai.server";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import {
   SearchFormActionData,
   SearchFormSchema,
 } from "~/components/SearchForm";
 import { z } from "zod";
+import { getAnthropic } from "~/utils/helpers/anthropic.server";
+import { getOpenAi } from "~/utils/helpers/openai.server";
 
-const AiResponseSchema = z.object({
-  food: z.string(),
-  is_safe: z.enum(["green", "yellow", "red", "undefined"]),
-  note: z.string(),
-});
+const AiResponseSchema = z.array(
+  z.object({
+    food: z.string(),
+    is_safe: z.coerce.string(z.enum(["1", "2", "3", "4", "undefined"])),
+    note: z.string(),
+  })
+);
 
 export const action: ActionFunction = async ({ request }) => {
   const { client } = await getSupabaseClient(request);
@@ -33,36 +37,79 @@ export const action: ActionFunction = async ({ request }) => {
     if (column) return redirect(`/${column.search}`);
 
     try {
-      // If we can't find a match, let's use AI to pull the food item out
-      const openai = await getOpenAi();
+      const anthropic = await getAnthropic();
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+      const message = await anthropic.messages.create({
+        max_tokens: 1024,
+        model: "claude-3-opus-20240229",
         messages: [
           {
-            role: "system",
-            content:
-              "You are an OBGYN and a patient is asking you about food. From the sentence that you get, you need to pull the food item out and place it in a JSON object with the key of 'food'. The food item should be in the format of a string. If you can't find a food item in the search at all, then return { food: 'none', is_safe: 'undefined', note: 'This doesn't seem to be a food.' }. If it is a food item however, then I want you determine if the food item is okay for a pregnant woman to eat. If it is, add a key of 'is_safe' with a value of 'green'. If it is not, add a key of 'is_safe' with a value of 'red'. If it is unknown, add a key of 'is_safe' with a value of 'yellow'. Then I want you to add a note about the food item and it's safety for pregnant women in the format of a string with the key of 'note'. So if someone asked you about 'sushi', you would respond with: { food: 'sushi', is_safe: 'red', note: 'Sushi is not safe to eat when pregnant.' }",
+            role: "user",
+            content: `
+              You are an OBGYN and a patient is asking you about food. From the sentence that you get, you need to extract all food items and return a JSON array of objects, where each object represents a single food item.
+
+              For each food item, create an object with the following keys:
+
+              'food': The name of the food item as a string.
+              'is_safe': A code representing the safety of the food for pregnant women:
+              If the food is safe to eat, assign '1'.
+              If the food is not safe to eat, assign '4'.
+              If the food can be eaten in moderation or with certain precautions, assign '2'.
+              If the safety of the food is unknown or uncertain, or leans more towards not smart to eat for pregnancy, assign '3'.
+              'note': A string providing a concise explanation of the food item's safety for pregnant women. This should only be 2 to 3 sentences long. It should only be about the food item that is associated with this sepcific object.
+
+              If you can't find any food items in the search, return an array with a single object:
+              [
+                {
+                  food: 'none',
+                  is_safe: 'undefined',
+                  note: 'This doesn't seem to be a food item.'
+                }
+              ]
+
+              For example, if someone asks about 'sushi and cooked salmon', you would respond with:
+              [
+                {
+                  food: 'sushi',
+                  is_safe: 'red',
+                  note: 'Raw fish in sushi can contain harmful bacteria and should be avoided during pregnancy.'
+                },
+                {
+                  food: 'cooked salmon',
+                  is_safe: 'green',
+                  note: 'Cooked salmon is generally safe to consume, as long as it is fully cooked to an internal temperature of 145°F (63°C) to eliminate any harmful parasites or bacteria.'
+                }
+              ]
+              
+              But if they only include one item, like "watermelon", you would respond with:
+              
+              [
+                {
+                  food: 'watermelon',
+                  is_safe: 'green',
+                  note: 'Watermelon is a safe and healthy choice
+                  during pregnancy, as it is a good source of
+                  vitamins and minerals, and is mostly made up of water.'
+                }
+              ]
+              
+              Here is the patient's question/query: ${search}`,
           },
           {
-            role: "user",
-            content: search,
+            role: "assistant",
+            content: "[{",
           },
         ],
-        response_format: { type: "json_object" },
       });
 
-      const choice = response.choices[0];
-      if (!choice.message.content) {
-        return json<SearchFormActionData>({
-          status: "error",
-          submission: data,
-        });
-      }
+      console.log(message);
+      console.log(JSON.parse("[{" + message.content[0].text));
 
-      const content = AiResponseSchema.parse(
-        JSON.parse(choice.message.content)
+      const contents = AiResponseSchema.parse(
+        JSON.parse("[{" + message.content[0].text)
       );
+
+      const content = contents[0];
 
       if (content.is_safe === "undefined") {
         return json<SearchFormActionData>({
@@ -84,6 +131,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       if (existing) return redirect(`/${existing.search}`);
 
+      const openai = await getOpenAi();
       const result = await openai.embeddings.create({
         input: content.food,
         model: "text-embedding-3-small",
@@ -91,13 +139,13 @@ export const action: ActionFunction = async ({ request }) => {
 
       const [{ embedding }] = result.data;
 
-      // @ts-expect-error - The embedding is correct
       const { data: document, error } = await client
         .from("documents")
         .insert({
+          // @ts-expect-error - The embedding is correct
+          embedding,
           search: content.food.toLowerCase(),
           content: content.note,
-          embedding: embedding,
           is_safe: content.is_safe,
         })
         .select()

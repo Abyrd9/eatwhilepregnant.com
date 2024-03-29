@@ -1,7 +1,7 @@
 import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
-import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
-import { cx } from "~/utils/helpers/cx";
+import { Feedback } from "~/components/Feedback";
+import { Result } from "~/components/Result";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import { Database } from "~/utils/types/supabase";
 
@@ -50,47 +50,8 @@ export default function Index() {
 
   return (
     <>
-      <div className="w-full pb-8">
-        {document.is_safe && (
-          <div
-            className={cx(
-              "p-2 font-medium rounded-md tracking-wide uppercase flex items-center space-x-2 w-full border",
-              {
-                "text-yellow-500 bg-yellow-50 border-yellow-200":
-                  document.is_safe === "yellow",
-                "text-red-500 bg-red-50 border-red-200":
-                  document.is_safe === "red",
-                "text-green-500 bg-green-50 border-green-200":
-                  document.is_safe === "green",
-              }
-            )}
-          >
-            <span>
-              {document.is_safe === "green" ? (
-                <FiCheckCircle className="text-lg" />
-              ) : document.is_safe === "red" ? (
-                <FiXOctagon className="text-lg" />
-              ) : document.is_safe === "yellow" ? (
-                <FiAlertTriangle className="text-lg" />
-              ) : null}
-            </span>
-            <span className="text-base">
-              {document.is_safe === "green"
-                ? "safe to eat"
-                : document.is_safe === "red"
-                  ? "do not eat"
-                  : document.is_safe === "yellow"
-                    ? "proceed with caution"
-                    : null}
-            </span>
-          </div>
-        )}
-
-        <h2 className="font-semibold text-xl text-zinc-700 pt-2 capitalize">
-          {document.search}
-        </h2>
-        <p className="font-lg text-base text-zinc-600">{document.content}</p>
-      </div>
+      <Result className="pb-4" document={document} />
+      <Feedback className="pb-8" document={document} />
     </>
   );
 }
