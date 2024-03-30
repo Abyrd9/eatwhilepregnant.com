@@ -1,6 +1,7 @@
 import { cx } from "~/utils/helpers/cx";
 import { Database } from "~/utils/types/supabase";
 import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
+import { useRef } from "react";
 
 type ResultProps = {
   className?: string;
@@ -8,6 +9,8 @@ type ResultProps = {
 };
 
 export const Result = ({ className, document }: ResultProps) => {
+  const Ref = useRef<HTMLParagraphElement>(null);
+
   return (
     <div className={cx("w-full", className)}>
       {document.is_safe && (
@@ -42,7 +45,7 @@ export const Result = ({ className, document }: ResultProps) => {
               : document.is_safe === "2"
                 ? "eat with caution"
                 : document.is_safe === "3"
-                  ? "eat with caution"
+                  ? "eat with extreme caution"
                   : document.is_safe === "4"
                     ? "do not eat"
                     : null}
@@ -53,7 +56,9 @@ export const Result = ({ className, document }: ResultProps) => {
       <h2 className="font-semibold text-xl text-zinc-700 pt-2.5 capitalize">
         {document.search}
       </h2>
-      <p className="font-lg text-base text-zinc-600">{document.content}</p>
+      <p ref={Ref} className="font-lg text-base text-zinc-600">
+        {document.content}
+      </p>
     </div>
   );
 };

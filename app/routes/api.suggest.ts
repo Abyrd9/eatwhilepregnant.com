@@ -30,8 +30,6 @@ export const action: ActionFunction = async ({ request }) => {
       })
       .select("*");
 
-    console.log(documents?.length);
-
     if (!documents || error) {
       console.error(error ? error : "No documents found");
       return json<SuggestLoaderData>(

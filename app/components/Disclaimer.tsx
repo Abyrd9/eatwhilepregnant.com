@@ -9,7 +9,7 @@ export const Disclaimer = () => {
     <>
       <div
         className={cx(
-          "p-2 rounded-md  space-x-1 w-full border text-blue-500 bg-blue-50 border-blue-200 text-xs grid grid-cols-[16px_1fr] max-w-[400px]"
+          "p-2 rounded-md  space-x-1 w-full border text-blue-500 bg-blue-50 border-blue-200 text-xs grid grid-cols-[16px_1fr] max-w-[400px] mb-4"
         )}
       >
         <FiInfo className="text-sm translate-y-px" />

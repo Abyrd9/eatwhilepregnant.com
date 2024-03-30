@@ -41,7 +41,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       const message = await anthropic.messages.create({
         max_tokens: 1024,
-        model: "claude-3-opus-20240229",
+        model: "claude-3-haiku-20240307",
         messages: [
           {
             role: "user",
@@ -101,9 +101,6 @@ export const action: ActionFunction = async ({ request }) => {
           },
         ],
       });
-
-      console.log(message);
-      console.log(JSON.parse("[{" + message.content[0].text));
 
       const contents = AiResponseSchema.parse(
         JSON.parse("[{" + message.content[0].text)
