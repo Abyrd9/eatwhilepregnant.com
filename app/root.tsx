@@ -44,7 +44,9 @@ export default function App() {
         <Disclaimer />
       </div>
 
-      <Footer />
+      <div className="pt-8">
+        <Footer />
+      </div>
     </div>
   );
 }
