@@ -17,13 +17,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6846086051700160"
-          crossOrigin="anonymous"
-        />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="google-adsense-account" content="ca-pub-6846086051700160" />
         <Meta />
         <Links />
       </head>
@@ -49,7 +45,7 @@ export default function App() {
         <Disclaimer />
       </div>
 
-      <div className="pt-8">
+      <div className="mt-auto pt-8">
         <Footer />
       </div>
     </div>
