@@ -16,6 +16,7 @@ export type Database = {
           id: number
           is_safe: Database["public"]["Enums"]["is_safe"] | null
           search: string
+          updated_at: string
         }
         Insert: {
           content?: string | null
@@ -23,6 +24,7 @@ export type Database = {
           id?: never
           is_safe?: Database["public"]["Enums"]["is_safe"] | null
           search: string
+          updated_at?: string
         }
         Update: {
           content?: string | null
@@ -30,6 +32,7 @@ export type Database = {
           id?: never
           is_safe?: Database["public"]["Enums"]["is_safe"] | null
           search?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -94,6 +97,7 @@ export type Database = {
               id: number
               is_safe: Database["public"]["Enums"]["is_safe"] | null
               search: string
+              updated_at: string
             }[]
           }
         | {
@@ -108,6 +112,7 @@ export type Database = {
               id: number
               is_safe: Database["public"]["Enums"]["is_safe"] | null
               search: string
+              updated_at: string
             }[]
           }
       vector_avg: {

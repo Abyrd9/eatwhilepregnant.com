@@ -5,13 +5,6 @@ import { Result } from "~/components/Result";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import { Database } from "~/utils/types/supabase";
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
-};
-
 type LoaderData = {
   document: Database["public"]["Tables"]["documents"]["Row"];
 };
@@ -50,6 +43,17 @@ export const loader: LoaderFunction = async ({ request, params }) => {
       },
     }
   );
+};
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  const document = data.document as LoaderData["document"];
+  return [
+    { title: document.search + " | eatwhilepregnant.com" },
+    {
+      name: "description",
+      content: `Is it okay for a pregnant woman to eat ${document.search}?`,
+    },
+  ];
 };
 
 export default function Index() {
