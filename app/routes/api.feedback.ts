@@ -1,10 +1,12 @@
 import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json } from "@remix-run/node";
+import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import {
   FEEDBACK_FORM_INTENT,
   FeedbackFormActionData,
   FeedbackFormSchema,
 } from "~/components/Feedback";
+import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -14,6 +16,22 @@ export const action: ActionFunction = async ({ request }) => {
   switch (intent) {
     case FEEDBACK_FORM_INTENT: {
       const data = parseWithZod(form, { schema: FeedbackFormSchema });
+
+      const ip_address = getClientIPAddress(request);
+      if (ip_address) {
+        const limiter = getRateLimiter(5, "60 m");
+        const res = await limiter.limit(ip_address);
+        if (!res.success) {
+          return json<FeedbackFormActionData>({
+            status: "error",
+            submission: data.reply({
+              fieldErrors: {
+                feedback: ["You have exceeded the rate limit for this action."],
+              },
+            }),
+          });
+        }
+      } else console.error("No IP address found.");
 
       if (data.status !== "success") {
         return json<FeedbackFormActionData>(

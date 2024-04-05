@@ -42,7 +42,14 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  return json<LoaderData>({ document });
+  return json<LoaderData>(
+    { document },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=60, stale-while-revalidate=86400",
+      },
+    }
+  );
 };
 
 export default function Index() {

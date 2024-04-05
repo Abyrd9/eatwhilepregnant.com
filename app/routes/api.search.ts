@@ -1,6 +1,5 @@
 import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json, redirect } from "@remix-run/node";
-// import { getOpenAi } from "~/utils/helpers/openai.server";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import {
   SearchFormActionData,
@@ -9,6 +8,8 @@ import {
 import { z } from "zod";
 import { getAnthropic } from "~/utils/helpers/anthropic.server";
 import { getOpenAi } from "~/utils/helpers/openai.server";
+import { getClientIPAddress } from "remix-utils/get-client-ip-address";
+import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
 
 const AiResponseSchema = z.array(
   z.object({
@@ -22,6 +23,22 @@ export const action: ActionFunction = async ({ request }) => {
   const { client } = await getSupabaseClient(request);
   const form = await request.clone().formData();
   const data = parseWithZod(form, { schema: SearchFormSchema });
+
+  const ip_address = getClientIPAddress(request);
+  if (ip_address) {
+    const limiter = getRateLimiter(100, "10 m");
+    const res = await limiter.limit(ip_address);
+    if (!res.success) {
+      return json<SearchFormActionData>({
+        status: "error",
+        submission: data.reply({
+          fieldErrors: {
+            search: ["You have exceeded the rate limit for this action."],
+          },
+        }),
+      });
+    }
+  } else console.error("No IP address found.");
 
   if (data.status === "success") {
     const search = data.value.search.toLowerCase();
