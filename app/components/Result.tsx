@@ -45,7 +45,7 @@ export const Result = ({ className, document }: ResultProps) => {
               : document.is_safe === "2"
                 ? "eat with caution"
                 : document.is_safe === "3"
-                  ? "eat with extreme caution"
+                  ? "eat with caution"
                   : document.is_safe === "4"
                     ? "do not eat"
                     : null}
