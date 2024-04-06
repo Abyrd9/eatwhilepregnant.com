@@ -39,7 +39,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     { document },
     {
       headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=86400",
+        "Cache-Control": "public, s-maxage=0, stale-while-revalidate=604800",
       },
     }
   );
