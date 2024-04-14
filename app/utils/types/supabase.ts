@@ -88,6 +88,20 @@ export type Database = {
       match_documents:
         | {
             Args: {
+              query: string
+              match_count: number
+            }
+            Returns: {
+              content: string | null
+              embedding: string
+              id: number
+              is_safe: Database["public"]["Enums"]["is_safe"] | null
+              search: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
               query_embedding: string
               match_threshold: number
             }

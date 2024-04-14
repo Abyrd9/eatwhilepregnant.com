@@ -7,7 +7,6 @@ import {
 } from "~/components/SearchForm";
 import { z } from "zod";
 import { getAnthropic } from "~/utils/helpers/anthropic.server";
-import { getOpenAi } from "~/utils/helpers/openai.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
 
@@ -145,19 +144,11 @@ export const action: ActionFunction = async ({ request }) => {
 
       if (existing) return redirect(`/${existing.search}`);
 
-      const openai = await getOpenAi();
-      const result = await openai.embeddings.create({
-        input: content.food,
-        model: "text-embedding-3-small",
-      });
-
-      const [{ embedding }] = result.data;
-
       const { data: document, error } = await client
         .from("documents")
         .insert({
-          // @ts-expect-error - The embedding is correct
-          embedding,
+          // @ts-expect-error - Let's stop using embeddings
+          embedding: null,
           search: content.food.toLowerCase(),
           content: content.note,
           is_safe: content.is_safe,

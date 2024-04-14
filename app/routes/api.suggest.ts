@@ -1,6 +1,5 @@
 import { ActionFunction, json } from "@remix-run/node";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
-import { getOpenAi } from "~/utils/helpers/openai.server";
 import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
 import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import { Database } from "~/utils/types/supabase";
@@ -32,19 +31,9 @@ export const action: ActionFunction = async ({ request }) => {
 
   const { client } = getSupabaseClient(request);
   if (query?.length > 0) {
-    const openai = await getOpenAi();
-    const result = await openai.embeddings.create({
-      input: query,
-      model: "text-embedding-3-small",
-    });
-
-    const [{ embedding }] = result.data;
-
     const { data: documents, error } = await client
       .rpc("match_documents", {
-        // @ts-expect-error - The embedding is correct
-        query_embedding: embedding,
-        match_threshold: 0.45,
+        query: query + ":*",
         match_count: 10,
       })
       .select("*");

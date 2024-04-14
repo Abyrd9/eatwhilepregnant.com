@@ -9,9 +9,8 @@ import { FiCornerDownLeft, FiLoader, FiSearch } from "react-icons/fi";
 import { FieldMetadata, useInputControl } from "@conform-to/react";
 import { cx } from "~/utils/helpers/cx";
 import { useEffect, useState } from "react";
-import { useDebounceFetcher } from "remix-utils/use-debounce-fetcher";
 import { SuggestLoaderData } from "~/routes/api.suggest";
-import { FetcherWithComponents } from "@remix-run/react";
+import { FetcherWithComponents, useFetcher } from "@remix-run/react";
 import { SearchFormActionData } from "./SearchForm";
 
 type SearchFormComboboxProps = {
@@ -23,7 +22,7 @@ export const SearchFormCombobox = ({
   searchFetcher,
   field,
 }: SearchFormComboboxProps) => {
-  const suggestFetcher = useDebounceFetcher<SuggestLoaderData>();
+  const suggestFetcher = useFetcher<SuggestLoaderData>();
 
   const search = useInputControl(field);
 
@@ -33,7 +32,6 @@ export const SearchFormCombobox = ({
     suggestFetcher.submit(form, {
       method: "POST",
       navigate: false,
-      debounceTimeout: 200,
       action: `/api/suggest?query=${search.value}`,
     });
   }, [search.value]);
