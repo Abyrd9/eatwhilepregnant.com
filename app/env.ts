@@ -6,5 +6,7 @@ export const env = createEnv({
   server: {
     SUPABASE_URL: z.string().url(),
     SUPABASE_KEY: z.string().min(1),
+    UPSTASH_REDIS_URL: z.string().min(1),
+    UPSTASH_REDIS_TOKEN: z.string().min(1),
   },
 });
