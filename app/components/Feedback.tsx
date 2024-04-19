@@ -6,13 +6,14 @@ import { useFetcher } from "@remix-run/react";
 import { z } from "zod";
 import { type ActionData } from "~/utils/types/generics";
 import { Button } from "~/primitives/button";
-import { Database } from "~/utils/types/supabase";
 import { Label } from "~/primitives/label";
+import { InferSelectModel } from "drizzle-orm";
+import { documents } from "~/drizzle/schema";
 
 export type FeedbackFormSchemaType = z.infer<typeof FeedbackFormSchema>;
 
 export const FeedbackFormSchema = z.object({
-  documentId: z.number(),
+  documentId: z.string(),
   food: z.string(),
   feedback: z.string({ required_error: "Please provide feedback." }),
 });
@@ -23,7 +24,7 @@ export type FeedbackFormActionData = ActionData<typeof FEEDBACK_FORM_INTENT>;
 
 type FeedbackProps = {
   className?: string;
-  document: Database["public"]["Tables"]["documents"]["Row"];
+  document: InferSelectModel<typeof documents>;
 };
 
 export const Feedback = ({ document, className }: FeedbackProps) => {

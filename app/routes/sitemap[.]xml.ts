@@ -1,18 +1,16 @@
 import { type LoaderFunction } from "@remix-run/node";
-import { getSupabaseClient } from "~/utils/helpers/supabase.server";
+import { db } from "~/drizzle/driver.server";
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const { client } = getSupabaseClient(request);
-
+export const loader: LoaderFunction = async () => {
   let content = `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
 
-  const { data: searches } = await client.from("documents").select("*");
+  const searches = await db.query.documents.findMany();
   if (searches) {
     searches.forEach((search) => {
       content += `
       <url>
         <loc>https://www.eatwhilepregnant.com/${search.search}</loc>
-        <lastmod>${search.updated_at}</lastmod>
+        <lastmod>${search.created_at}</lastmod>
         <priority>1.0</priority>
       </url>`;
     });

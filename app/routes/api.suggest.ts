@@ -1,11 +1,12 @@
 import { ActionFunction, json } from "@remix-run/node";
+import { InferSelectModel, like } from "drizzle-orm";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
+import { db } from "~/drizzle/driver.server";
+import { documents } from "~/drizzle/schema";
 import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
-import { getSupabaseClient } from "~/utils/helpers/supabase.server";
-import { Database } from "~/utils/types/supabase";
 
 export type SuggestLoaderData = {
-  documents: Database["public"]["Tables"]["documents"]["Row"][];
+  documents: InferSelectModel<typeof documents>[];
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -29,17 +30,15 @@ export const action: ActionFunction = async ({ request }) => {
   const url = new URL(request.url);
   const query = url.searchParams.get("query") as string;
 
-  const { client } = getSupabaseClient(request);
   if (query?.length > 0) {
-    const { data: documents, error } = await client
-      .rpc("match_documents", {
-        query: query + ":*",
-        match_count: 10,
-      })
-      .select("*");
+    const suggestedDocumentsToShow: SuggestLoaderData["documents"] = await db
+      .select()
+      .from(documents)
+      .where(like(documents.search, `%${query}%`))
+      .limit(10);
 
-    if (!documents || error) {
-      console.error(error ? error : "No documents found");
+    if (!suggestedDocumentsToShow) {
+      console.error("No documents found");
       return json<SuggestLoaderData>(
         {
           documents: [],
@@ -50,7 +49,7 @@ export const action: ActionFunction = async ({ request }) => {
 
     return json<SuggestLoaderData>(
       {
-        documents,
+        documents: suggestedDocumentsToShow,
       },
       { status: 200 }
     );

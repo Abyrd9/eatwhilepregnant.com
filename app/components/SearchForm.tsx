@@ -3,8 +3,9 @@ import { useFetcher } from "@remix-run/react";
 import { z } from "zod";
 import { cx } from "~/utils/helpers/cx";
 import { ActionData } from "~/utils/types/generics";
-import { Database } from "~/utils/types/supabase";
 import { SearchFormCombobox } from "./SearchForm.Combobox";
+import { InferSelectModel } from "drizzle-orm";
+import { documents } from "~/drizzle/schema";
 
 export type SearchFormSchemaType = z.infer<typeof SearchFormSchema>;
 export const SearchFormSchema = z.object({
@@ -18,7 +19,7 @@ export type SearchFormActionData = ActionData<SearchFormSchemaType>;
 
 type SearchFormProps = {
   className?: string;
-  documents: Database["public"]["Tables"]["documents"]["Row"][];
+  documents: InferSelectModel<typeof documents>[];
 };
 
 export const SearchForm = ({ className }: SearchFormProps) => {

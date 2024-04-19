@@ -6,8 +6,9 @@ import {
   FeedbackFormActionData,
   FeedbackFormSchema,
 } from "~/components/Feedback";
+import { db } from "~/drizzle/driver.server";
+import { feedback } from "~/drizzle/schema";
 import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
-import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.clone().formData();
@@ -44,18 +45,12 @@ export const action: ActionFunction = async ({ request }) => {
         );
       }
 
-      const { client } = await getSupabaseClient(request);
-
       try {
-        const { error } = await client.from("feedback").insert({
+        await db.insert(feedback).values({
           document_id: data.value.documentId,
           food: data.value.food,
           feedback: data.value.feedback,
         });
-
-        if (error) {
-          console.error(error);
-        }
 
         return json<FeedbackFormActionData>(
           {

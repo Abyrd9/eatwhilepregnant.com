@@ -1,17 +1,16 @@
 import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData } from "@remix-run/react";
+import { InferSelectModel, eq } from "drizzle-orm";
 import { Feedback } from "~/components/Feedback";
 import { Result } from "~/components/Result";
-import { getSupabaseClient } from "~/utils/helpers/supabase.server";
-import { Database } from "~/utils/types/supabase";
+import { db } from "~/drizzle/driver.server";
+import { documents } from "~/drizzle/schema";
 
 type LoaderData = {
-  document: Database["public"]["Tables"]["documents"]["Row"];
+  document: InferSelectModel<typeof documents>;
 };
 
-export const loader: LoaderFunction = async ({ request, params }) => {
-  const { client } = await getSupabaseClient(request);
-
+export const loader: LoaderFunction = async ({ params }) => {
   if (!params?.search) {
     console.error("No search value provided.");
     throw new Response("Bad Request", { status: 400 });
@@ -19,30 +18,28 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
   const search = params?.search.toLowerCase();
 
-  const { data: document, error } = await client
-    .from("documents")
-    .select("*")
-    .eq("search", search)
-    .single();
+  try {
+    const document = await db.query.documents.findFirst({
+      where: eq(documents.search, search),
+    });
 
-  if (error) {
+    if (!document) {
+      console.error("No column found.");
+      throw new Response("Not Found", { status: 404 });
+    }
+
+    return json<LoaderData>(
+      { document },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=0, stale-while-revalidate=604800",
+        },
+      }
+    );
+  } catch (error) {
     console.error(error);
     throw new Response("Internal Server Error", { status: 500 });
   }
-
-  if (!document) {
-    console.error("No column found.");
-    throw new Response("Not Found", { status: 404 });
-  }
-
-  return json<LoaderData>(
-    { document },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=0, stale-while-revalidate=604800",
-      },
-    }
-  );
 };
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {

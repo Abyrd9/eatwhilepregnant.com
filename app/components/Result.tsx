@@ -1,11 +1,12 @@
 import { cx } from "~/utils/helpers/cx";
-import { Database } from "~/utils/types/supabase";
 import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
 import { useRef } from "react";
+import { InferSelectModel } from "drizzle-orm";
+import { documents } from "~/drizzle/schema";
 
 type ResultProps = {
   className?: string;
-  document: Database["public"]["Tables"]["documents"]["Row"];
+  document: InferSelectModel<typeof documents>;
 };
 
 export const Result = ({ className, document }: ResultProps) => {

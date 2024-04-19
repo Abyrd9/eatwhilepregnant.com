@@ -1,6 +1,5 @@
 import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json, redirect } from "@remix-run/node";
-import { getSupabaseClient } from "~/utils/helpers/supabase.server";
 import {
   SearchFormActionData,
   SearchFormSchema,
@@ -9,6 +8,9 @@ import { z } from "zod";
 import { getAnthropic } from "~/utils/helpers/anthropic.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
+import { db } from "~/drizzle/driver.server";
+import { InferSelectModel, eq } from "drizzle-orm";
+import { documents } from "~/drizzle/schema";
 
 const AiResponseSchema = z.array(
   z.object({
@@ -19,7 +21,6 @@ const AiResponseSchema = z.array(
 );
 
 export const action: ActionFunction = async ({ request }) => {
-  const { client } = await getSupabaseClient(request);
   const form = await request.clone().formData();
   const data = parseWithZod(form, { schema: SearchFormSchema });
 
@@ -44,11 +45,9 @@ export const action: ActionFunction = async ({ request }) => {
 
     // Let's check to see if we can get a quick match on the search column
     // If we can, let's just return that
-    const { data: column } = await client
-      .from("documents")
-      .select("*")
-      .eq("search", search)
-      .single();
+    const column = await db.query.documents.findFirst({
+      where: eq(documents.search, search),
+    });
 
     if (column) return redirect(`/${column.search}`);
 
@@ -136,33 +135,22 @@ export const action: ActionFunction = async ({ request }) => {
       }
 
       // Let's check if the word that was pulled out is a food item we already have in the DB
-      const { data: existing } = await client
-        .from("documents")
-        .select("*")
-        .eq("search", content.food.toLowerCase())
-        .single();
+      const existing = await db.query.documents.findFirst({
+        where: eq(documents.search, content.food.toLowerCase()),
+      });
 
       if (existing) return redirect(`/${existing.search}`);
 
-      const { data: document, error } = await client
-        .from("documents")
-        .insert({
-          // @ts-expect-error - Let's stop using embeddings
-          embedding: null,
+      const [document] = await db
+        .insert(documents)
+        .values({
           search: content.food.toLowerCase(),
           content: content.note,
-          is_safe: content.is_safe,
+          is_safe: content.is_safe as InferSelectModel<
+            typeof documents
+          >["is_safe"],
         })
-        .select()
-        .single();
-
-      if (error || !document) {
-        console.error(error);
-        return json<SearchFormActionData>({
-          status: "error",
-          submission: data,
-        });
-      }
+        .returning();
 
       return redirect(`/${document.search}`);
     } catch (error) {

@@ -137,7 +137,7 @@ export const SearchFormCombobox = ({
         {documents.map((document) => (
           <ComboboxItem
             key={document.id}
-            value={document.search}
+            value={document.search ?? ""}
             className="capitalize data-[active-item]:bg-blue-500 data-[active-item]:text-white px-1 py-1.5 rounded hover:bg-blue-100 cursor-pointer text-sm"
           >
             {document.search}
