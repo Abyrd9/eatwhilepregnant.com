@@ -5,6 +5,10 @@ export default defineConfig({
   out: "./app/drizzle/migrations",
   driver: "better-sqlite",
   dbCredentials: {
-    url: "sqlite.db",
+    url:
+      process.env.NODE_ENV === "production"
+        ? "file:///data/sqlite.db"
+        : "data/sqlite.db",
   },
+  verbose: true,
 });

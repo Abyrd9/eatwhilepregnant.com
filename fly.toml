@@ -11,6 +11,10 @@ primary_region = 'iad'
 [env]
   PORT = '8080'
 
+[experimental]
+  cmd = "start.sh"
+  entrypoint = "sh"
+
 [http_service]
   internal_port = 8080
   force_https = true
@@ -21,7 +25,7 @@ primary_region = 'iad'
 
 [mounts]
   source = "eatwhilepregnant_db"
-  destination = "/mnt/eatwhilepregnant_db"
+  destination = "/data"
 
 [[vm]]
   memory = '1gb'
