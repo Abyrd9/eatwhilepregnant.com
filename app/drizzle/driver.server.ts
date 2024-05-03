@@ -1,14 +1,16 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
+import { createClient } from "@libsql/client";
+import * as dotenv from "dotenv";
+dotenv.config();
 
-const sqlite = new Database(
-  process.env.NODE_ENV === "production"
-    ? "../../data/sqlite.db" // Have to do this stupid relative path shit for production
-    : "data/sqlite.db"
-);
-export const db = drizzle(sqlite, {
+const client = createClient({
+  url: process.env.TURSO_DB_URL!,
+  authToken: process.env.TURSO_DB_TOKEN,
+});
+
+export const db = drizzle(client, {
   schema,
 });
 
