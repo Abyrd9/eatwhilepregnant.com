@@ -9,5 +9,6 @@ export const env = createEnv({
     UPSTASH_REDIS_TOKEN: z.string().min(1),
     TURSO_DB_URL: z.string().min(1),
     TURSO_DB_TOKEN: z.optional(z.string().min(1)),
+    GENERIC_SESSION_SECRET: z.string().min(1),
   },
 });
