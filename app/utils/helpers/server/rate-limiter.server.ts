@@ -5,9 +5,18 @@ import { RateLimiterRedis } from "rate-limiter-flexible";
 const client = new Redis({
   host: env.UPSTASH_REDIS_URL,
   port: env.UPSTASH_REDIS_PORT,
-  username: "default",
   password: env.UPSTASH_REDIS_PASSWORD,
+  username: "default",
   family: 6,
+});
+
+client.on("error", (error) => {
+  console.error(
+    error,
+    env.UPSTASH_REDIS_URL,
+    env.UPSTASH_REDIS_PORT,
+    env.UPSTASH_REDIS_PASSWORD
+  );
 });
 
 export const getRateLimiter = (tokens = 1, window: number) => {
