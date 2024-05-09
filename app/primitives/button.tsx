@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import React, { forwardRef } from "react";
 import { LuLoader } from "react-icons/lu";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   isLoading?: boolean;
@@ -14,8 +14,6 @@ const ButtonLoadingContext = React.createContext({ isLoading: false });
 
 const ButtonRoot = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, color, size, isLoading, ...props }, ref) => {
-    
-
     return (
       <ButtonLoadingContext.Provider value={{ isLoading: Boolean(isLoading) }}>
         <button

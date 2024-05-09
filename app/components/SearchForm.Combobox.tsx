@@ -7,7 +7,7 @@ import {
 } from "@ariakit/react";
 import { FiCornerDownLeft, FiLoader, FiSearch } from "react-icons/fi";
 import { FieldMetadata, useInputControl } from "@conform-to/react";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 import { useEffect, useState } from "react";
 import { SuggestLoaderData } from "~/routes/api.suggest";
 import { FetcherWithComponents, useFetcher } from "@remix-run/react";

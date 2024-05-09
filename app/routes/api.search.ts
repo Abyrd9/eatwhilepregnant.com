@@ -5,9 +5,9 @@ import {
   SearchFormSchema,
 } from "~/components/SearchForm";
 import { z } from "zod";
-import { getAnthropic } from "~/utils/helpers/anthropic.server";
+import { getAnthropic } from "~/utils/helpers/server/anthropic.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
-import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
+import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
 import { db } from "~/drizzle/driver.server";
 import { InferSelectModel, eq } from "drizzle-orm";
 import { documents } from "~/drizzle/schema";
@@ -26,9 +26,8 @@ export const action: ActionFunction = async ({ request }) => {
 
   const ip_address = getClientIPAddress(request);
   if (ip_address) {
-    const limiter = getRateLimiter(100, "10 m");
-    const res = await limiter.limit(ip_address);
-    if (!res.success) {
+    const limiter = getRateLimiter(100, 60 * 10);
+    await limiter.consume(ip_address).catch(() => {
       return json<SearchFormActionData>({
         status: "error",
         submission: data.reply({
@@ -37,7 +36,7 @@ export const action: ActionFunction = async ({ request }) => {
           },
         }),
       });
-    }
+    });
   } else console.error("No IP address found.");
 
   if (data.status === "success") {

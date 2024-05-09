@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiInfo } from "react-icons/fi";
 import { Dialog } from "~/primitives/dialog";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 
 export const Disclaimer = () => {
   const [open, setOpen] = useState(false);

@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import React, { forwardRef } from "react";
 import { LuLoader } from "react-icons/lu";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 
 export type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   isLoading?: boolean;
@@ -14,8 +14,6 @@ const IconButtonLoadingContext = React.createContext({ isLoading: false });
 
 const IconButtonRoot = forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ className, variant, color, size, isLoading, ...props }, ref) => {
-    
-
     return (
       <IconButtonLoadingContext.Provider
         value={{ isLoading: Boolean(isLoading) }}

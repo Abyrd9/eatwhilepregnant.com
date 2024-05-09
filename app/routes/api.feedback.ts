@@ -8,7 +8,7 @@ import {
 } from "~/components/Feedback";
 import { db } from "~/drizzle/driver.server";
 import { feedback } from "~/drizzle/schema";
-import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
+import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.clone().formData();
@@ -20,18 +20,25 @@ export const action: ActionFunction = async ({ request }) => {
 
       const ip_address = getClientIPAddress(request);
       if (ip_address) {
-        const limiter = getRateLimiter(5, "60 m");
-        const res = await limiter.limit(ip_address);
-        if (!res.success) {
-          return json<FeedbackFormActionData>({
-            status: "error",
-            submission: data.reply({
-              fieldErrors: {
-                feedback: ["You have exceeded the rate limit for this action."],
-              },
-            }),
-          });
-        }
+        const limiter = getRateLimiter(5, 60 * 60);
+        await limiter.consume(ip_address).catch(() => {
+          return json<FeedbackFormActionData>(
+            {
+              status: "error",
+              submission: data.reply({
+                fieldErrors: {
+                  feedback: [
+                    "You have exceeded the rate limit for this action.",
+                  ],
+                },
+              }),
+            },
+            {
+              status: 429,
+              statusText: "Rate limit exceeded.",
+            }
+          );
+        });
       } else console.error("No IP address found.");
 
       if (data.status !== "success") {

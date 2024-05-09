@@ -1,6 +1,6 @@
 import * as RadixLabel from "@radix-ui/react-label";
 import React from "react";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 
 type LabelProps = React.ComponentPropsWithRef<"label">;
 

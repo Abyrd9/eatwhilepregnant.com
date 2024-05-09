@@ -8,7 +8,10 @@ import {
   commitPwaBannerSession,
   getPwaBannerSession,
 } from "~/utils/cookies/pwa-banner-cookie.server";
-import { PWA_FORM_INTENT, PwaBannerFormSchema } from "~/utils/helpers/pwa";
+import {
+  PWA_FORM_INTENT,
+  PwaBannerFormSchema,
+} from "~/utils/helpers/client/pwa";
 
 export const loader: LoaderFunction = () => json({}, { status: 404 });
 

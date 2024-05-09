@@ -1,4 +1,4 @@
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
 import { useRef } from "react";
 import { InferSelectModel } from "drizzle-orm";

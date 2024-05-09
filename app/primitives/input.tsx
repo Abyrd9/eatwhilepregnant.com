@@ -1,5 +1,5 @@
 import React from "react";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 
 export type InputProps = React.ComponentPropsWithoutRef<"input">;
 

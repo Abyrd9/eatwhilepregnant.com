@@ -1,7 +1,7 @@
 import { getFormProps, useForm } from "@conform-to/react";
 import { useFetcher } from "@remix-run/react";
 import { z } from "zod";
-import { cx } from "~/utils/helpers/cx";
+import { cx } from "~/utils/helpers/client/cx";
 import { ActionData } from "~/utils/types/generics";
 import { SearchFormCombobox } from "./SearchForm.Combobox";
 import { InferSelectModel } from "drizzle-orm";

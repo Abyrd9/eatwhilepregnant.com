@@ -14,7 +14,7 @@ import { ImageHeadings } from "./components/ImageHeadings";
 import { Disclaimer } from "./components/Disclaimer";
 import { Footer } from "./components/Footer";
 import { ManifestLink } from "@remix-pwa/sw";
-import { PwaProvider, usePWA } from "./utils/helpers/pwa";
+import { PwaProvider, usePWA } from "./utils/helpers/client/pwa";
 import { LoaderFunction } from "@remix-run/node";
 import { getPwaBannerSession } from "./utils/cookies/pwa-banner-cookie.server";
 import { useEffect } from "react";

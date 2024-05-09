@@ -3,7 +3,7 @@ import { InferSelectModel, like } from "drizzle-orm";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import { db } from "~/drizzle/driver.server";
 import { documents } from "~/drizzle/schema";
-import { getRateLimiter } from "~/utils/helpers/rate-limiter.server";
+import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
 
 export type SuggestLoaderData = {
   documents: InferSelectModel<typeof documents>[];
@@ -12,19 +12,18 @@ export type SuggestLoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   const ip_address = getClientIPAddress(request);
   if (ip_address) {
-    const limiter = getRateLimiter(100, "5 m");
-    const res = await limiter.limit(ip_address);
-    if (!res.success) {
+    const limiter = getRateLimiter(100, 60 * 5);
+    await limiter.consume(ip_address).catch(() => {
       return json<SuggestLoaderData>(
         {
           documents: [],
         },
         {
-          status: 500,
+          status: 429,
           statusText: "Rate limit exceeded.",
         }
       );
-    }
+    });
   } else console.error("No IP address found.");
 
   const url = new URL(request.url);
