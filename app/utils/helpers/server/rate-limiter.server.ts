@@ -11,12 +11,7 @@ const client = new Redis({
 });
 
 client.on("error", (error) => {
-  console.error(
-    error,
-    env.UPSTASH_REDIS_URL,
-    env.UPSTASH_REDIS_PORT,
-    env.UPSTASH_REDIS_PASSWORD
-  );
+  console.error(error);
 });
 
 export const getRateLimiter = (tokens = 1, window: number) => {
