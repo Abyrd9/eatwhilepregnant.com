@@ -67,11 +67,11 @@ export default function App() {
 
   return (
     <div className="h-dvh w-dvw flex flex-col items-center sm:pt-[10dvh] p-4 pt-8">
-      <ImageHeadings className="pb-12" />
+      <ImageHeadings className="pb-10" />
       <div className="max-w-[500px] w-full flex flex-col items-center relative">
-        <SearchForm className="pb-3" documents={[]} />
+        <SearchForm className="pb-0" documents={[]} />
 
-        <div className="w-full max-w-[300px] h-px bg-gray-200 my-6" />
+        <div className="w-full max-w-[300px] h-px bg-gray-200 my-5" />
 
         <Outlet />
         <Disclaimer />

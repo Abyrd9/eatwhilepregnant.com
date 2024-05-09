@@ -298,7 +298,7 @@ const routes = {
 };
 const entry = { module: entryWorker };
 /**
- * @remix-run/router v1.15.3
+ * @remix-run/router v1.16.0
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -1361,12 +1361,14 @@ function createRouter(init) {
   let dataRoutes = convertRoutesToDataRoutes(init.routes, mapRouteProperties, void 0, manifest);
   let inFlightDataRoutes;
   let basename = init.basename || "/";
+  let dataStrategyImpl = init.unstable_dataStrategy || defaultDataStrategy;
   let future = _extends({
     v7_fetcherPersist: false,
     v7_normalizeFormMethod: false,
     v7_partialHydration: false,
     v7_prependBasename: false,
-    v7_relativeSplatPath: false
+    v7_relativeSplatPath: false,
+    unstable_skipActionErrorRevalidation: false
   }, init.future);
   let unlistenHistory = null;
   let subscribers = /* @__PURE__ */ new Set();
@@ -1400,10 +1402,12 @@ function createRouter(init) {
     let loaderData = init.hydrationData ? init.hydrationData.loaderData : null;
     let errors2 = init.hydrationData ? init.hydrationData.errors : null;
     let isRouteInitialized = (m) => {
-      if (!m.route.loader)
+      if (!m.route.loader) {
         return true;
-      if (m.route.loader.hydrate === true)
+      }
+      if (typeof m.route.loader === "function" && m.route.loader.hydrate === true) {
         return false;
+      }
       return loaderData && loaderData[m.route.id] !== void 0 || errors2 && errors2[m.route.id] !== void 0;
     };
     if (errors2) {
@@ -1766,42 +1770,37 @@ function createRouter(init) {
     }
     pendingNavigationController = new AbortController();
     let request = createClientSideRequest(init.history, location, pendingNavigationController.signal, opts && opts.submission);
-    let pendingActionData;
-    let pendingError;
+    let pendingActionResult;
     if (opts && opts.pendingError) {
-      pendingError = {
-        [findNearestBoundary(matches).route.id]: opts.pendingError
-      };
+      pendingActionResult = [findNearestBoundary(matches).route.id, {
+        type: ResultType.error,
+        error: opts.pendingError
+      }];
     } else if (opts && opts.submission && isMutationMethod(opts.submission.formMethod)) {
-      let actionOutput = await handleAction2(request, location, opts.submission, matches, {
+      let actionResult = await handleAction2(request, location, opts.submission, matches, {
         replace: opts.replace,
         flushSync
       });
-      if (actionOutput.shortCircuited) {
+      if (actionResult.shortCircuited) {
         return;
       }
-      pendingActionData = actionOutput.pendingActionData;
-      pendingError = actionOutput.pendingActionError;
+      pendingActionResult = actionResult.pendingActionResult;
       loadingNavigation = getLoadingNavigation(location, opts.submission);
       flushSync = false;
-      request = new Request(request.url, {
-        signal: request.signal
-      });
+      request = createClientSideRequest(init.history, request.url, request.signal);
     }
     let {
       shortCircuited,
       loaderData,
       errors: errors2
-    } = await handleLoaders(request, location, matches, loadingNavigation, opts && opts.submission, opts && opts.fetcherSubmission, opts && opts.replace, opts && opts.initialHydration === true, flushSync, pendingActionData, pendingError);
+    } = await handleLoaders(request, location, matches, loadingNavigation, opts && opts.submission, opts && opts.fetcherSubmission, opts && opts.replace, opts && opts.initialHydration === true, flushSync, pendingActionResult);
     if (shortCircuited) {
       return;
     }
     pendingNavigationController = null;
     completeNavigation(location, _extends({
       matches
-    }, pendingActionData ? {
-      actionData: pendingActionData
-    } : {}, {
+    }, getActionDataForCommit(pendingActionResult), {
       loaderData,
       errors: errors2
     }));
@@ -1829,7 +1828,8 @@ function createRouter(init) {
         })
       };
     } else {
-      result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath);
+      let results = await callDataStrategy("action", request, [actionMatch], matches);
+      result = results[0];
       if (request.signal.aborted) {
         return {
           shortCircuited: true
@@ -1841,9 +1841,10 @@ function createRouter(init) {
       if (opts && opts.replace != null) {
         replace = opts.replace;
       } else {
-        replace = result.location === state.location.pathname + state.location.search;
+        let location2 = normalizeRedirectLocation(result.response.headers.get("Location"), new URL(request.url), basename);
+        replace = location2 === state.location.pathname + state.location.search;
       }
-      await startRedirectNavigation(state, result, {
+      await startRedirectNavigation(request, result, {
         submission,
         replace
       });
@@ -1851,35 +1852,29 @@ function createRouter(init) {
         shortCircuited: true
       };
     }
+    if (isDeferredResult(result)) {
+      throw getInternalRouterError(400, {
+        type: "defer-action"
+      });
+    }
     if (isErrorResult(result)) {
       let boundaryMatch = findNearestBoundary(matches, actionMatch.route.id);
       if ((opts && opts.replace) !== true) {
         pendingAction = Action.Push;
       }
       return {
-        // Send back an empty object we can use to clear out any prior actionData
-        pendingActionData: {},
-        pendingActionError: {
-          [boundaryMatch.route.id]: result.error
-        }
+        pendingActionResult: [boundaryMatch.route.id, result]
       };
     }
-    if (isDeferredResult(result)) {
-      throw getInternalRouterError(400, {
-        type: "defer-action"
-      });
-    }
     return {
-      pendingActionData: {
-        [actionMatch.route.id]: result.data
-      }
+      pendingActionResult: [actionMatch.route.id, result]
     };
   }
-  async function handleLoaders(request, location, matches, overrideNavigation, submission, fetcherSubmission, replace, initialHydration, flushSync, pendingActionData, pendingError) {
+  async function handleLoaders(request, location, matches, overrideNavigation, submission, fetcherSubmission, replace, initialHydration, flushSync, pendingActionResult) {
     let loadingNavigation = overrideNavigation || getLoadingNavigation(location, submission);
     let activeSubmission = submission || fetcherSubmission || getSubmissionFromNavigation(loadingNavigation);
     let routesToUse = inFlightDataRoutes || dataRoutes;
-    let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init.history, state, matches, activeSubmission, location, future.v7_partialHydration && initialHydration === true, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, deletedFetchers, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionData, pendingError);
+    let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init.history, state, matches, activeSubmission, location, future.v7_partialHydration && initialHydration === true, future.unstable_skipActionErrorRevalidation, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, deletedFetchers, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionResult);
     cancelActiveDeferreds((routeId) => !(matches && matches.some((m) => m.route.id === routeId)) || matchesToLoad && matchesToLoad.some((m) => m.route.id === routeId));
     pendingNavigationLoadId = ++incrementingLoadId;
     if (matchesToLoad.length === 0 && revalidatingFetchers.length === 0) {
@@ -1888,10 +1883,10 @@ function createRouter(init) {
         matches,
         loaderData: {},
         // Commit pending error if we're short circuiting
-        errors: pendingError || null
-      }, pendingActionData ? {
-        actionData: pendingActionData
-      } : {}, updatedFetchers2 ? {
+        errors: pendingActionResult && isErrorResult(pendingActionResult[1]) ? {
+          [pendingActionResult[0]]: pendingActionResult[1].error
+        } : null
+      }, getActionDataForCommit(pendingActionResult), updatedFetchers2 ? {
         fetchers: new Map(state.fetchers)
       } : {}), {
         flushSync
@@ -1906,12 +1901,21 @@ function createRouter(init) {
         let revalidatingFetcher = getLoadingFetcher(void 0, fetcher ? fetcher.data : void 0);
         state.fetchers.set(rf.key, revalidatingFetcher);
       });
-      let actionData = pendingActionData || state.actionData;
+      let actionData;
+      if (pendingActionResult && !isErrorResult(pendingActionResult[1])) {
+        actionData = {
+          [pendingActionResult[0]]: pendingActionResult[1].data
+        };
+      } else if (state.actionData) {
+        if (Object.keys(state.actionData).length === 0) {
+          actionData = null;
+        } else {
+          actionData = state.actionData;
+        }
+      }
       updateState(_extends({
         navigation: loadingNavigation
-      }, actionData ? Object.keys(actionData).length === 0 ? {
-        actionData: null
-      } : {
+      }, actionData !== void 0 ? {
         actionData
       } : {}, revalidatingFetchers.length > 0 ? {
         fetchers: new Map(state.fetchers)
@@ -1932,7 +1936,6 @@ function createRouter(init) {
       pendingNavigationController.signal.addEventListener("abort", abortPendingFetchRevalidations);
     }
     let {
-      results,
       loaderResults,
       fetcherResults
     } = await callLoadersAndMaybeResolveData(state.matches, matches, matchesToLoad, revalidatingFetchers, request);
@@ -1945,13 +1948,13 @@ function createRouter(init) {
       pendingNavigationController.signal.removeEventListener("abort", abortPendingFetchRevalidations);
     }
     revalidatingFetchers.forEach((rf) => fetchControllers.delete(rf.key));
-    let redirect3 = findRedirect(results);
+    let redirect3 = findRedirect([...loaderResults, ...fetcherResults]);
     if (redirect3) {
       if (redirect3.idx >= matchesToLoad.length) {
         let fetcherKey = revalidatingFetchers[redirect3.idx - matchesToLoad.length].key;
         fetchRedirectIds.add(fetcherKey);
       }
-      await startRedirectNavigation(state, redirect3.result, {
+      await startRedirectNavigation(request, redirect3.result, {
         replace
       });
       return {
@@ -1961,7 +1964,7 @@ function createRouter(init) {
     let {
       loaderData,
       errors: errors2
-    } = processLoaderData(state, matches, matchesToLoad, loaderResults, pendingError, revalidatingFetchers, fetcherResults, activeDeferreds);
+    } = processLoaderData(state, matches, matchesToLoad, loaderResults, pendingActionResult, revalidatingFetchers, fetcherResults, activeDeferreds);
     activeDeferreds.forEach((deferredData, routeId) => {
       deferredData.subscribe((aborted) => {
         if (aborted || deferredData.done) {
@@ -2053,7 +2056,8 @@ function createRouter(init) {
     let fetchRequest = createClientSideRequest(init.history, path, abortController.signal, submission);
     fetchControllers.set(key, abortController);
     let originatingLoadId = incrementingLoadId;
-    let actionResult = await callLoaderOrAction("action", fetchRequest, match, requestMatches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath);
+    let actionResults = await callDataStrategy("action", fetchRequest, [match], requestMatches);
+    let actionResult = actionResults[0];
     if (fetchRequest.signal.aborted) {
       if (fetchControllers.get(key) === abortController) {
         fetchControllers.delete(key);
@@ -2074,7 +2078,7 @@ function createRouter(init) {
         } else {
           fetchRedirectIds.add(key);
           updateFetcherState(key, getLoadingFetcher(submission));
-          return startRedirectNavigation(state, actionResult, {
+          return startRedirectNavigation(fetchRequest, actionResult, {
             fetcherSubmission: submission
           });
         }
@@ -2098,27 +2102,7 @@ function createRouter(init) {
     fetchReloadIds.set(key, loadId);
     let loadFetcher = getLoadingFetcher(submission, actionResult.data);
     state.fetchers.set(key, loadFetcher);
-    let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(
-      init.history,
-      state,
-      matches,
-      submission,
-      nextLocation,
-      false,
-      isRevalidationRequired,
-      cancelledDeferredRoutes,
-      cancelledFetcherLoads,
-      deletedFetchers,
-      fetchLoadMatches,
-      fetchRedirectIds,
-      routesToUse,
-      basename,
-      {
-        [match.route.id]: actionResult.data
-      },
-      void 0
-      // No need to send through errors since we short circuit above
-    );
+    let [matchesToLoad, revalidatingFetchers] = getMatchesToLoad(init.history, state, matches, submission, nextLocation, false, future.unstable_skipActionErrorRevalidation, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, deletedFetchers, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, [match.route.id, actionResult]);
     revalidatingFetchers.filter((rf) => rf.key !== key).forEach((rf) => {
       let staleKey = rf.key;
       let existingFetcher2 = state.fetchers.get(staleKey);
@@ -2137,7 +2121,6 @@ function createRouter(init) {
     let abortPendingFetchRevalidations = () => revalidatingFetchers.forEach((rf) => abortFetcher(rf.key));
     abortController.signal.addEventListener("abort", abortPendingFetchRevalidations);
     let {
-      results,
       loaderResults,
       fetcherResults
     } = await callLoadersAndMaybeResolveData(state.matches, matches, matchesToLoad, revalidatingFetchers, revalidationRequest);
@@ -2148,13 +2131,13 @@ function createRouter(init) {
     fetchReloadIds.delete(key);
     fetchControllers.delete(key);
     revalidatingFetchers.forEach((r) => fetchControllers.delete(r.key));
-    let redirect3 = findRedirect(results);
+    let redirect3 = findRedirect([...loaderResults, ...fetcherResults]);
     if (redirect3) {
       if (redirect3.idx >= matchesToLoad.length) {
         let fetcherKey = revalidatingFetchers[redirect3.idx - matchesToLoad.length].key;
         fetchRedirectIds.add(fetcherKey);
       }
-      return startRedirectNavigation(state, redirect3.result);
+      return startRedirectNavigation(revalidationRequest, redirect3.result);
     }
     let {
       loaderData,
@@ -2192,7 +2175,8 @@ function createRouter(init) {
     let fetchRequest = createClientSideRequest(init.history, path, abortController.signal);
     fetchControllers.set(key, abortController);
     let originatingLoadId = incrementingLoadId;
-    let result = await callLoaderOrAction("loader", fetchRequest, match, matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath);
+    let results = await callDataStrategy("loader", fetchRequest, [match], matches);
+    let result = results[0];
     if (isDeferredResult(result)) {
       result = await resolveDeferredData(result, fetchRequest.signal, true) || result;
     }
@@ -2212,7 +2196,7 @@ function createRouter(init) {
         return;
       } else {
         fetchRedirectIds.add(key);
-        await startRedirectNavigation(state, result);
+        await startRedirectNavigation(fetchRequest, result);
         return;
       }
     }
@@ -2223,34 +2207,36 @@ function createRouter(init) {
     invariant(!isDeferredResult(result), "Unhandled fetcher deferred data");
     updateFetcherState(key, getDoneFetcher(result.data));
   }
-  async function startRedirectNavigation(state2, redirect3, _temp2) {
+  async function startRedirectNavigation(request, redirect3, _temp2) {
     let {
       submission,
       fetcherSubmission,
       replace
     } = _temp2 === void 0 ? {} : _temp2;
-    if (redirect3.revalidate) {
+    if (redirect3.response.headers.has("X-Remix-Revalidate")) {
       isRevalidationRequired = true;
     }
-    let redirectLocation = createLocation(state2.location, redirect3.location, {
+    let location = redirect3.response.headers.get("Location");
+    invariant(location, "Expected a Location header on the redirect Response");
+    location = normalizeRedirectLocation(location, new URL(request.url), basename);
+    let redirectLocation = createLocation(state.location, location, {
       _isRedirect: true
     });
-    invariant(redirectLocation, "Expected a location on the redirect navigation");
     if (isBrowser) {
       let isDocumentReload = false;
-      if (redirect3.reloadDocument) {
+      if (redirect3.response.headers.has("X-Remix-Reload-Document")) {
         isDocumentReload = true;
-      } else if (ABSOLUTE_URL_REGEX.test(redirect3.location)) {
-        const url = init.history.createURL(redirect3.location);
+      } else if (ABSOLUTE_URL_REGEX.test(location)) {
+        const url = init.history.createURL(location);
         isDocumentReload = // Hard reload if it's an absolute URL to a new origin
         url.origin !== routerWindow.location.origin || // Hard reload if it's an absolute URL that does not match our basename
         stripBasename(url.pathname, basename) == null;
       }
       if (isDocumentReload) {
         if (replace) {
-          routerWindow.location.replace(redirect3.location);
+          routerWindow.location.replace(location);
         } else {
-          routerWindow.location.assign(redirect3.location);
+          routerWindow.location.assign(location);
         }
         return;
       }
@@ -2261,15 +2247,15 @@ function createRouter(init) {
       formMethod,
       formAction,
       formEncType
-    } = state2.navigation;
+    } = state.navigation;
     if (!submission && !fetcherSubmission && formMethod && formAction && formEncType) {
-      submission = getSubmissionFromNavigation(state2.navigation);
+      submission = getSubmissionFromNavigation(state.navigation);
     }
     let activeSubmission = submission || fetcherSubmission;
-    if (redirectPreserveMethodStatusCodes.has(redirect3.status) && activeSubmission && isMutationMethod(activeSubmission.formMethod)) {
+    if (redirectPreserveMethodStatusCodes.has(redirect3.response.status) && activeSubmission && isMutationMethod(activeSubmission.formMethod)) {
       await startNavigation(redirectHistoryAction, redirectLocation, {
         submission: _extends({}, activeSubmission, {
-          formAction: redirect3.location
+          formAction: location
         }),
         // Preserve this flag across redirects
         preventScrollReset: pendingPreventScrollReset
@@ -2285,25 +2271,42 @@ function createRouter(init) {
       });
     }
   }
+  async function callDataStrategy(type, request, matchesToLoad, matches) {
+    try {
+      let results = await callDataStrategyImpl(dataStrategyImpl, type, request, matchesToLoad, matches, manifest, mapRouteProperties);
+      return await Promise.all(results.map((result, i) => {
+        if (isRedirectHandlerResult(result)) {
+          let response = result.result;
+          return {
+            type: ResultType.redirect,
+            response: normalizeRelativeRoutingRedirectResponse(response, request, matchesToLoad[i].route.id, matches, basename, future.v7_relativeSplatPath)
+          };
+        }
+        return convertHandlerResultToDataResult(result);
+      }));
+    } catch (e) {
+      return matchesToLoad.map(() => ({
+        type: ResultType.error,
+        error: e
+      }));
+    }
+  }
   async function callLoadersAndMaybeResolveData(currentMatches, matches, matchesToLoad, fetchersToLoad, request) {
-    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath)), ...fetchersToLoad.map((f) => {
+    let [loaderResults, ...fetcherResults] = await Promise.all([matchesToLoad.length ? callDataStrategy("loader", request, matchesToLoad, matches) : [], ...fetchersToLoad.map((f) => {
       if (f.matches && f.match && f.controller) {
-        return callLoaderOrAction("loader", createClientSideRequest(init.history, f.path, f.controller.signal), f.match, f.matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath);
+        let fetcherRequest = createClientSideRequest(init.history, f.path, f.controller.signal);
+        return callDataStrategy("loader", fetcherRequest, [f.match], f.matches).then((r) => r[0]);
       } else {
-        let error = {
+        return Promise.resolve({
           type: ResultType.error,
           error: getInternalRouterError(404, {
             pathname: f.path
           })
-        };
-        return error;
+        });
       }
     })]);
-    let loaderResults = results.slice(0, matchesToLoad.length);
-    let fetcherResults = results.slice(matchesToLoad.length);
     await Promise.all([resolveDeferredResults(currentMatches, matchesToLoad, loaderResults, loaderResults.map(() => request.signal), false, state.loaderData), resolveDeferredResults(currentMatches, fetchersToLoad.map((f) => f.match), fetcherResults, fetchersToLoad.map((f) => f.controller ? f.controller.signal : null), true)]);
     return {
-      results,
       loaderResults,
       fetcherResults
     };
@@ -2589,7 +2592,9 @@ function createStaticHandler(routes2, opts) {
   let dataRoutes = convertRoutesToDataRoutes(routes2, mapRouteProperties, void 0, manifest);
   async function query(request, _temp3) {
     let {
-      requestContext
+      requestContext,
+      skipLoaderErrorBubbling,
+      unstable_dataStrategy
     } = _temp3 === void 0 ? {} : _temp3;
     let url = new URL(request.url);
     let method = request.method;
@@ -2640,7 +2645,7 @@ function createStaticHandler(routes2, opts) {
         activeDeferreds: null
       };
     }
-    let result = await queryImpl(request, location, matches, requestContext);
+    let result = await queryImpl(request, location, matches, requestContext, unstable_dataStrategy || null, skipLoaderErrorBubbling === true, null);
     if (isResponse$1(result)) {
       return result;
     }
@@ -2678,7 +2683,7 @@ function createStaticHandler(routes2, opts) {
         pathname: location.pathname
       });
     }
-    let result = await queryImpl(request, location, matches, requestContext, match);
+    let result = await queryImpl(request, location, matches, requestContext, null, false, match);
     if (isResponse$1(result)) {
       return result;
     }
@@ -2699,24 +2704,24 @@ function createStaticHandler(routes2, opts) {
     }
     return void 0;
   }
-  async function queryImpl(request, location, matches, requestContext, routeMatch) {
+  async function queryImpl(request, location, matches, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, routeMatch) {
     invariant(request.signal, "query()/queryRoute() requests must contain an AbortController signal");
     try {
       if (isMutationMethod(request.method.toLowerCase())) {
-        let result2 = await submit(request, matches, routeMatch || getTargetMatch(matches, location), requestContext, routeMatch != null);
+        let result2 = await submit(request, matches, routeMatch || getTargetMatch(matches, location), requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, routeMatch != null);
         return result2;
       }
-      let result = await loadRouteData(request, matches, requestContext, routeMatch);
+      let result = await loadRouteData(request, matches, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, routeMatch);
       return isResponse$1(result) ? result : _extends({}, result, {
         actionData: null,
         actionHeaders: {}
       });
     } catch (e) {
-      if (isQueryRouteResponse(e)) {
+      if (isHandlerResult(e) && isResponse$1(e.result)) {
         if (e.type === ResultType.error) {
-          throw e.response;
+          throw e.result;
         }
-        return e.response;
+        return e.result;
       }
       if (isRedirectResponse$1(e)) {
         return e;
@@ -2724,7 +2729,7 @@ function createStaticHandler(routes2, opts) {
       throw e;
     }
   }
-  async function submit(request, matches, actionMatch, requestContext, isRouteRequest) {
+  async function submit(request, matches, actionMatch, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, isRouteRequest) {
     let result;
     if (!actionMatch.route.action && !actionMatch.route.lazy) {
       let error = getInternalRouterError(405, {
@@ -2740,20 +2745,17 @@ function createStaticHandler(routes2, opts) {
         error
       };
     } else {
-      result = await callLoaderOrAction("action", request, actionMatch, matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath, {
-        isStaticRequest: true,
-        isRouteRequest,
-        requestContext
-      });
+      let results = await callDataStrategy("action", request, [actionMatch], matches, isRouteRequest, requestContext, unstable_dataStrategy);
+      result = results[0];
       if (request.signal.aborted) {
         throwStaticHandlerAbortedError(request, isRouteRequest, future);
       }
     }
     if (isRedirectResult(result)) {
       throw new Response(null, {
-        status: result.status,
+        status: result.response.status,
         headers: {
-          Location: result.location
+          Location: result.response.headers.get("Location")
         }
       });
     }
@@ -2788,37 +2790,36 @@ function createStaticHandler(routes2, opts) {
         activeDeferreds: null
       };
     }
+    let loaderRequest = new Request(request.url, {
+      headers: request.headers,
+      redirect: request.redirect,
+      signal: request.signal
+    });
     if (isErrorResult(result)) {
-      let boundaryMatch = findNearestBoundary(matches, actionMatch.route.id);
-      let context2 = await loadRouteData(request, matches, requestContext, void 0, {
-        [boundaryMatch.route.id]: result.error
-      });
+      let boundaryMatch = skipLoaderErrorBubbling ? actionMatch : findNearestBoundary(matches, actionMatch.route.id);
+      let context2 = await loadRouteData(loaderRequest, matches, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, null, [boundaryMatch.route.id, result]);
       return _extends({}, context2, {
-        statusCode: isRouteErrorResponse(result.error) ? result.error.status : 500,
+        statusCode: isRouteErrorResponse(result.error) ? result.error.status : result.statusCode != null ? result.statusCode : 500,
         actionData: null,
         actionHeaders: _extends({}, result.headers ? {
           [actionMatch.route.id]: result.headers
         } : {})
       });
     }
-    let loaderRequest = new Request(request.url, {
-      headers: request.headers,
-      redirect: request.redirect,
-      signal: request.signal
-    });
-    let context = await loadRouteData(loaderRequest, matches, requestContext);
-    return _extends({}, context, result.statusCode ? {
-      statusCode: result.statusCode
-    } : {}, {
+    let context = await loadRouteData(loaderRequest, matches, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, null);
+    return _extends({}, context, {
       actionData: {
         [actionMatch.route.id]: result.data
-      },
-      actionHeaders: _extends({}, result.headers ? {
+      }
+    }, result.statusCode ? {
+      statusCode: result.statusCode
+    } : {}, {
+      actionHeaders: result.headers ? {
         [actionMatch.route.id]: result.headers
-      } : {})
+      } : {}
     });
   }
-  async function loadRouteData(request, matches, requestContext, routeMatch, pendingActionError) {
+  async function loadRouteData(request, matches, requestContext, unstable_dataStrategy, skipLoaderErrorBubbling, routeMatch, pendingActionResult) {
     let isRouteRequest = routeMatch != null;
     if (isRouteRequest && !(routeMatch != null && routeMatch.route.loader) && !(routeMatch != null && routeMatch.route.lazy)) {
       throw getInternalRouterError(400, {
@@ -2827,7 +2828,7 @@ function createStaticHandler(routes2, opts) {
         routeId: routeMatch == null ? void 0 : routeMatch.route.id
       });
     }
-    let requestMatches = routeMatch ? [routeMatch] : getLoaderMatchesUntilBoundary(matches, Object.keys(pendingActionError || {})[0]);
+    let requestMatches = routeMatch ? [routeMatch] : pendingActionResult && isErrorResult(pendingActionResult[1]) ? getLoaderMatchesUntilBoundary(matches, pendingActionResult[0]) : matches;
     let matchesToLoad = requestMatches.filter((m) => m.route.loader || m.route.lazy);
     if (matchesToLoad.length === 0) {
       return {
@@ -2836,22 +2837,20 @@ function createStaticHandler(routes2, opts) {
         loaderData: matches.reduce((acc, m) => Object.assign(acc, {
           [m.route.id]: null
         }), {}),
-        errors: pendingActionError || null,
+        errors: pendingActionResult && isErrorResult(pendingActionResult[1]) ? {
+          [pendingActionResult[0]]: pendingActionResult[1].error
+        } : null,
         statusCode: 200,
         loaderHeaders: {},
         activeDeferreds: null
       };
     }
-    let results = await Promise.all([...matchesToLoad.map((match) => callLoaderOrAction("loader", request, match, matches, manifest, mapRouteProperties, basename, future.v7_relativeSplatPath, {
-      isStaticRequest: true,
-      isRouteRequest,
-      requestContext
-    }))]);
+    let results = await callDataStrategy("loader", request, matchesToLoad, matches, isRouteRequest, requestContext, unstable_dataStrategy);
     if (request.signal.aborted) {
       throwStaticHandlerAbortedError(request, isRouteRequest, future);
     }
     let activeDeferreds = /* @__PURE__ */ new Map();
-    let context = processRouteLoaderData(matches, matchesToLoad, results, pendingActionError, activeDeferreds);
+    let context = processRouteLoaderData(matches, matchesToLoad, results, pendingActionResult, activeDeferreds, skipLoaderErrorBubbling);
     let executedLoaders = new Set(matchesToLoad.map((match) => match.route.id));
     matches.forEach((match) => {
       if (!executedLoaders.has(match.route.id)) {
@@ -2862,6 +2861,19 @@ function createStaticHandler(routes2, opts) {
       matches,
       activeDeferreds: activeDeferreds.size > 0 ? Object.fromEntries(activeDeferreds.entries()) : null
     });
+  }
+  async function callDataStrategy(type, request, matchesToLoad, matches, isRouteRequest, requestContext, unstable_dataStrategy) {
+    let results = await callDataStrategyImpl(unstable_dataStrategy || defaultDataStrategy, type, request, matchesToLoad, matches, manifest, mapRouteProperties, requestContext);
+    return await Promise.all(results.map((result, i) => {
+      if (isRedirectHandlerResult(result)) {
+        let response = result.result;
+        throw normalizeRelativeRoutingRedirectResponse(response, request, matchesToLoad[i].route.id, matches, basename, future.v7_relativeSplatPath);
+      }
+      if (isResponse$1(result.result) && isRouteRequest) {
+        throw result;
+      }
+      return convertHandlerResultToDataResult(result);
+    }));
   }
   return {
     dataRoutes,
@@ -3042,12 +3054,14 @@ function getLoaderMatchesUntilBoundary(matches, boundaryId) {
   }
   return boundaryMatches;
 }
-function getMatchesToLoad(history, state, matches, submission, location, isInitialLoad, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, deletedFetchers, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionData, pendingError) {
-  let actionResult = pendingError ? Object.values(pendingError)[0] : pendingActionData ? Object.values(pendingActionData)[0] : void 0;
+function getMatchesToLoad(history, state, matches, submission, location, isInitialLoad, skipActionErrorRevalidation, isRevalidationRequired, cancelledDeferredRoutes, cancelledFetcherLoads, deletedFetchers, fetchLoadMatches, fetchRedirectIds, routesToUse, basename, pendingActionResult) {
+  let actionResult = pendingActionResult ? isErrorResult(pendingActionResult[1]) ? pendingActionResult[1].error : pendingActionResult[1].data : void 0;
   let currentUrl = history.createURL(state.location);
   let nextUrl = history.createURL(location);
-  let boundaryId = pendingError ? Object.keys(pendingError)[0] : void 0;
-  let boundaryMatches = getLoaderMatchesUntilBoundary(matches, boundaryId);
+  let boundaryId = pendingActionResult && isErrorResult(pendingActionResult[1]) ? pendingActionResult[0] : void 0;
+  let boundaryMatches = boundaryId ? getLoaderMatchesUntilBoundary(matches, boundaryId) : matches;
+  let actionStatus = pendingActionResult ? pendingActionResult[1].statusCode : void 0;
+  let shouldSkipRevalidation = skipActionErrorRevalidation && actionStatus && actionStatus >= 400;
   let navigationMatches = boundaryMatches.filter((match, index) => {
     let {
       route
@@ -3059,7 +3073,7 @@ function getMatchesToLoad(history, state, matches, submission, location, isIniti
       return false;
     }
     if (isInitialLoad) {
-      if (route.loader.hydrate) {
+      if (typeof route.loader !== "function" || route.loader.hydrate) {
         return true;
       }
       return state.loaderData[route.id] === void 0 && // Don't re-run if the loader ran and threw an error
@@ -3077,10 +3091,10 @@ function getMatchesToLoad(history, state, matches, submission, location, isIniti
       nextParams: nextRouteMatch.params
     }, submission, {
       actionResult,
-      defaultShouldRevalidate: (
+      unstable_actionStatus: actionStatus,
+      defaultShouldRevalidate: shouldSkipRevalidation ? false : (
         // Forced revalidation due to submission, useRevalidator, or X-Remix-Revalidate
-        isRevalidationRequired || // Clicked the same link, resubmitted a GET form
-        currentUrl.pathname + currentUrl.search === nextUrl.pathname + nextUrl.search || // Search params affect all loaders
+        isRevalidationRequired || currentUrl.pathname + currentUrl.search === nextUrl.pathname + nextUrl.search || // Search params affect all loaders
         currentUrl.search !== nextUrl.search || isNewRouteInstance(currentRouteMatch, nextRouteMatch)
       )
     }));
@@ -3119,7 +3133,8 @@ function getMatchesToLoad(history, state, matches, submission, location, isIniti
         nextParams: matches[matches.length - 1].params
       }, submission, {
         actionResult,
-        defaultShouldRevalidate: isRevalidationRequired
+        unstable_actionStatus: actionStatus,
+        defaultShouldRevalidate: shouldSkipRevalidation ? false : isRevalidationRequired
       }));
     }
     if (shouldRevalidate) {
@@ -3188,11 +3203,35 @@ async function loadLazyRouteModule(route, mapRouteProperties, manifest) {
     lazy: void 0
   }));
 }
-async function callLoaderOrAction(type, request, match, matches, manifest, mapRouteProperties, basename, v7_relativeSplatPath, opts) {
-  if (opts === void 0) {
-    opts = {};
-  }
-  let resultType;
+function defaultDataStrategy(opts) {
+  return Promise.all(opts.matches.map((m) => m.resolve()));
+}
+async function callDataStrategyImpl(dataStrategyImpl, type, request, matchesToLoad, matches, manifest, mapRouteProperties, requestContext) {
+  let routeIdsToLoad = matchesToLoad.reduce((acc, m) => acc.add(m.route.id), /* @__PURE__ */ new Set());
+  let loadedMatches = /* @__PURE__ */ new Set();
+  let results = await dataStrategyImpl({
+    matches: matches.map((match) => {
+      let shouldLoad = routeIdsToLoad.has(match.route.id);
+      let resolve = (handlerOverride) => {
+        loadedMatches.add(match.route.id);
+        return shouldLoad ? callLoaderOrAction(type, request, match, manifest, mapRouteProperties, handlerOverride, requestContext) : Promise.resolve({
+          type: ResultType.data,
+          result: void 0
+        });
+      };
+      return _extends({}, match, {
+        shouldLoad,
+        resolve
+      });
+    }),
+    request,
+    params: matches[0].params,
+    context: requestContext
+  });
+  matches.forEach((m) => invariant(loadedMatches.has(m.route.id), '`match.resolve()` was not called for route id "' + m.route.id + '". You must call `match.resolve()` on every match passed to `dataStrategy` to ensure all routes are properly loaded.'));
+  return results.filter((_, i) => routeIdsToLoad.has(matches[i].route.id));
+}
+async function callLoaderOrAction(type, request, match, manifest, mapRouteProperties, handlerOverride, staticContext) {
   let result;
   let onReject;
   let runHandler = (handler) => {
@@ -3200,18 +3239,43 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
     let abortPromise = new Promise((_, r) => reject = r);
     onReject = () => reject();
     request.signal.addEventListener("abort", onReject);
-    return Promise.race([handler({
-      request,
-      params: match.params,
-      context: opts.requestContext
-    }), abortPromise]);
+    let actualHandler = (ctx) => {
+      if (typeof handler !== "function") {
+        return Promise.reject(new Error("You cannot call the handler for a route which defines a boolean " + ('"' + type + '" [routeId: ' + match.route.id + "]")));
+      }
+      return handler({
+        request,
+        params: match.params,
+        context: staticContext
+      }, ...ctx !== void 0 ? [ctx] : []);
+    };
+    let handlerPromise;
+    if (handlerOverride) {
+      handlerPromise = handlerOverride((ctx) => actualHandler(ctx));
+    } else {
+      handlerPromise = (async () => {
+        try {
+          let val = await actualHandler();
+          return {
+            type: "data",
+            result: val
+          };
+        } catch (e) {
+          return {
+            type: "error",
+            result: e
+          };
+        }
+      })();
+    }
+    return Promise.race([handlerPromise, abortPromise]);
   };
   try {
     let handler = match.route[type];
     if (match.route.lazy) {
       if (handler) {
         let handlerError;
-        let values = await Promise.all([
+        let [value] = await Promise.all([
           // If the handler throws, don't let it immediately bubble out,
           // since we need to let the lazy() execution finish so we know if this
           // route has a boundary that can handle the error
@@ -3220,10 +3284,10 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
           }),
           loadLazyRouteModule(match.route, mapRouteProperties, manifest)
         ]);
-        if (handlerError) {
+        if (handlerError !== void 0) {
           throw handlerError;
         }
-        result = values[0];
+        result = value;
       } else {
         await loadLazyRouteModule(match.route, mapRouteProperties, manifest);
         handler = match.route[type];
@@ -3240,7 +3304,7 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
         } else {
           return {
             type: ResultType.data,
-            data: void 0
+            result: void 0
           };
         }
       }
@@ -3253,49 +3317,26 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
     } else {
       result = await runHandler(handler);
     }
-    invariant(result !== void 0, "You defined " + (type === "action" ? "an action" : "a loader") + " for route " + ('"' + match.route.id + "\" but didn't return anything from your `" + type + "` ") + "function. Please return a value or `null`.");
+    invariant(result.result !== void 0, "You defined " + (type === "action" ? "an action" : "a loader") + " for route " + ('"' + match.route.id + "\" but didn't return anything from your `" + type + "` ") + "function. Please return a value or `null`.");
   } catch (e) {
-    resultType = ResultType.error;
-    result = e;
+    return {
+      type: ResultType.error,
+      result: e
+    };
   } finally {
     if (onReject) {
       request.signal.removeEventListener("abort", onReject);
     }
   }
+  return result;
+}
+async function convertHandlerResultToDataResult(handlerResult) {
+  let {
+    result,
+    type,
+    status
+  } = handlerResult;
   if (isResponse$1(result)) {
-    let status = result.status;
-    if (redirectStatusCodes$1.has(status)) {
-      let location = result.headers.get("Location");
-      invariant(location, "Redirects returned/thrown from loaders/actions must have a Location header");
-      if (!ABSOLUTE_URL_REGEX.test(location)) {
-        location = normalizeTo(new URL(request.url), matches.slice(0, matches.indexOf(match) + 1), basename, true, location, v7_relativeSplatPath);
-      } else if (!opts.isStaticRequest) {
-        let currentUrl = new URL(request.url);
-        let url = location.startsWith("//") ? new URL(currentUrl.protocol + location) : new URL(location);
-        let isSameBasename = stripBasename(url.pathname, basename) != null;
-        if (url.origin === currentUrl.origin && isSameBasename) {
-          location = url.pathname + url.search + url.hash;
-        }
-      }
-      if (opts.isStaticRequest) {
-        result.headers.set("Location", location);
-        throw result;
-      }
-      return {
-        type: ResultType.redirect,
-        status,
-        location,
-        revalidate: result.headers.get("X-Remix-Revalidate") !== null,
-        reloadDocument: result.headers.get("X-Remix-Reload-Document") !== null
-      };
-    }
-    if (opts.isRouteRequest) {
-      let queryRouteResponse = {
-        type: resultType === ResultType.error ? ResultType.error : ResultType.data,
-        response: result
-      };
-      throw queryRouteResponse;
-    }
     let data;
     try {
       let contentType = result.headers.get("Content-Type");
@@ -3314,10 +3355,11 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
         error: e
       };
     }
-    if (resultType === ResultType.error) {
+    if (type === ResultType.error) {
       return {
-        type: resultType,
-        error: new ErrorResponseImpl(status, result.statusText, data),
+        type: ResultType.error,
+        error: new ErrorResponseImpl(result.status, result.statusText, data),
+        statusCode: result.status,
         headers: result.headers
       };
     }
@@ -3328,10 +3370,11 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
       headers: result.headers
     };
   }
-  if (resultType === ResultType.error) {
+  if (type === ResultType.error) {
     return {
-      type: resultType,
-      error: result
+      type: ResultType.error,
+      error: result,
+      statusCode: isRouteErrorResponse(result) ? result.status : status
     };
   }
   if (isDeferredData$1(result)) {
@@ -3345,8 +3388,30 @@ async function callLoaderOrAction(type, request, match, matches, manifest, mapRo
   }
   return {
     type: ResultType.data,
-    data: result
+    data: result,
+    statusCode: status
   };
+}
+function normalizeRelativeRoutingRedirectResponse(response, request, routeId, matches, basename, v7_relativeSplatPath) {
+  let location = response.headers.get("Location");
+  invariant(location, "Redirects returned/thrown from loaders/actions must have a Location header");
+  if (!ABSOLUTE_URL_REGEX.test(location)) {
+    let trimmedMatches = matches.slice(0, matches.findIndex((m) => m.route.id === routeId) + 1);
+    location = normalizeTo(new URL(request.url), trimmedMatches, basename, true, location, v7_relativeSplatPath);
+    response.headers.set("Location", location);
+  }
+  return response;
+}
+function normalizeRedirectLocation(location, currentUrl, basename) {
+  if (ABSOLUTE_URL_REGEX.test(location)) {
+    let normalizedLocation = location;
+    let url = normalizedLocation.startsWith("//") ? new URL(currentUrl.protocol + normalizedLocation) : new URL(normalizedLocation);
+    let isSameBasename = stripBasename(url.pathname, basename) != null;
+    if (url.origin === currentUrl.origin && isSameBasename) {
+      return url.pathname + url.search + url.hash;
+    }
+  }
+  return location;
 }
 function createClientSideRequest(history, location, signal, submission) {
   let url = history.createURL(stripHashFromPath(location)).toString();
@@ -3388,25 +3453,30 @@ function convertSearchParamsToFormData(searchParams) {
   }
   return formData;
 }
-function processRouteLoaderData(matches, matchesToLoad, results, pendingError, activeDeferreds) {
+function processRouteLoaderData(matches, matchesToLoad, results, pendingActionResult, activeDeferreds, skipLoaderErrorBubbling) {
   let loaderData = {};
   let errors2 = null;
   let statusCode;
   let foundError = false;
   let loaderHeaders = {};
+  let pendingError = pendingActionResult && isErrorResult(pendingActionResult[1]) ? pendingActionResult[1].error : void 0;
   results.forEach((result, index) => {
     let id = matchesToLoad[index].route.id;
     invariant(!isRedirectResult(result), "Cannot handle redirect results in processLoaderData");
     if (isErrorResult(result)) {
-      let boundaryMatch = findNearestBoundary(matches, id);
       let error = result.error;
-      if (pendingError) {
-        error = Object.values(pendingError)[0];
+      if (pendingError !== void 0) {
+        error = pendingError;
         pendingError = void 0;
       }
       errors2 = errors2 || {};
-      if (errors2[boundaryMatch.route.id] == null) {
-        errors2[boundaryMatch.route.id] = error;
+      if (skipLoaderErrorBubbling) {
+        errors2[id] = error;
+      } else {
+        let boundaryMatch = findNearestBoundary(matches, id);
+        if (errors2[boundaryMatch.route.id] == null) {
+          errors2[boundaryMatch.route.id] = error;
+        }
       }
       loaderData[id] = void 0;
       if (!foundError) {
@@ -3420,20 +3490,28 @@ function processRouteLoaderData(matches, matchesToLoad, results, pendingError, a
       if (isDeferredResult(result)) {
         activeDeferreds.set(id, result.deferredData);
         loaderData[id] = result.deferredData.data;
+        if (result.statusCode != null && result.statusCode !== 200 && !foundError) {
+          statusCode = result.statusCode;
+        }
+        if (result.headers) {
+          loaderHeaders[id] = result.headers;
+        }
       } else {
         loaderData[id] = result.data;
-      }
-      if (result.statusCode != null && result.statusCode !== 200 && !foundError) {
-        statusCode = result.statusCode;
-      }
-      if (result.headers) {
-        loaderHeaders[id] = result.headers;
+        if (result.statusCode && result.statusCode !== 200 && !foundError) {
+          statusCode = result.statusCode;
+        }
+        if (result.headers) {
+          loaderHeaders[id] = result.headers;
+        }
       }
     }
   });
-  if (pendingError) {
-    errors2 = pendingError;
-    loaderData[Object.keys(pendingError)[0]] = void 0;
+  if (pendingError !== void 0 && pendingActionResult) {
+    errors2 = {
+      [pendingActionResult[0]]: pendingError
+    };
+    loaderData[pendingActionResult[0]] = void 0;
   }
   return {
     loaderData,
@@ -3442,11 +3520,19 @@ function processRouteLoaderData(matches, matchesToLoad, results, pendingError, a
     loaderHeaders
   };
 }
-function processLoaderData(state, matches, matchesToLoad, results, pendingError, revalidatingFetchers, fetcherResults, activeDeferreds) {
+function processLoaderData(state, matches, matchesToLoad, results, pendingActionResult, revalidatingFetchers, fetcherResults, activeDeferreds) {
   let {
     loaderData,
     errors: errors2
-  } = processRouteLoaderData(matches, matchesToLoad, results, pendingError, activeDeferreds);
+  } = processRouteLoaderData(
+    matches,
+    matchesToLoad,
+    results,
+    pendingActionResult,
+    activeDeferreds,
+    false
+    // This method is only called client side so we always want to bubble
+  );
   for (let index = 0; index < revalidatingFetchers.length; index++) {
     let {
       key,
@@ -3495,6 +3581,19 @@ function mergeLoaderData(loaderData, newLoaderData, matches, errors2) {
     }
   }
   return mergedLoaderData;
+}
+function getActionDataForCommit(pendingActionResult) {
+  if (!pendingActionResult) {
+    return {};
+  }
+  return isErrorResult(pendingActionResult[1]) ? {
+    // Clear out prior actionData on errors
+    actionData: {}
+  } : {
+    actionData: {
+      [pendingActionResult[0]]: pendingActionResult[1].data
+    }
+  };
 }
 function findNearestBoundary(matches, routeId) {
   let eligibleMatches = routeId ? matches.slice(0, matches.findIndex((m) => m.route.id === routeId) + 1) : [...matches];
@@ -3578,6 +3677,12 @@ function isHashChangeOnly(a, b) {
   }
   return false;
 }
+function isHandlerResult(result) {
+  return result != null && typeof result === "object" && "type" in result && "result" in result && (result.type === ResultType.data || result.type === ResultType.error);
+}
+function isRedirectHandlerResult(result) {
+  return isResponse$1(result.result) && redirectStatusCodes$1.has(result.result.status);
+}
 function isDeferredResult(result) {
   return result.type === ResultType.deferred;
 }
@@ -3601,9 +3706,6 @@ function isRedirectResponse$1(result) {
   let status = result.status;
   let location = result.headers.get("Location");
   return status >= 300 && status <= 399 && location != null;
-}
-function isQueryRouteResponse(obj) {
-  return obj && isResponse$1(obj.response) && (obj.type === ResultType.data || obj.type === ResultType.error);
 }
 function isValidMethod(method) {
   return validRequestMethods.has(method.toLowerCase());
@@ -3898,7 +4000,7 @@ function getAugmentedNamespace(n) {
 }
 var mode$2 = {};
 /**
- * @remix-run/server-runtime v2.8.1
+ * @remix-run/server-runtime v2.9.1
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -3930,7 +4032,7 @@ const require$$0 = /* @__PURE__ */ getAugmentedNamespace(router$2);
 var errors$2 = {};
 const require$$1$1 = /* @__PURE__ */ getAugmentedNamespace(mode$1);
 /**
- * @remix-run/server-runtime v2.8.1
+ * @remix-run/server-runtime v2.9.1
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -4009,7 +4111,7 @@ const errors$1 = /* @__PURE__ */ _mergeNamespaces({
 }, [errors$2]);
 const require$$1 = /* @__PURE__ */ getAugmentedNamespace(errors$1);
 /**
- * @remix-run/server-runtime v2.8.1
+ * @remix-run/server-runtime v2.9.1
  *
  * Copyright (c) Remix Software Inc.
  *

@@ -121,7 +121,7 @@ export const SearchFormCombobox = ({
       <ComboboxPopover
         gutter={16}
         sameWidth
-        className="bg-white rounded-sm p-2 shadow border border-black/10"
+        className="bg-white rounded-sm p-2 shadow border border-black/10 z-10"
       >
         {documents.length === 0 && (
           <div>
