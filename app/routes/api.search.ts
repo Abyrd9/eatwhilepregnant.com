@@ -64,7 +64,7 @@ export const action: ActionFunction = async ({ request }) => {
 
               For each food item, create an object with the following keys:
 
-              'food': The name of the food item as a string.
+              'food': The name of the food item as a string. Make sure it is not plural. If the input is plural, convert it to singular. For example, if the input is 'apples', the output should be 'apple'.
               'is_safe': A code representing the safety of the food for pregnant women:
               If the food is safe to eat, assign '1'.
               If the food is not safe to eat, assign '4'.

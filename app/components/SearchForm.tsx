@@ -6,6 +6,8 @@ import { ActionData } from "~/utils/types/generics";
 import { SearchFormCombobox } from "./SearchForm.Combobox";
 import { InferSelectModel } from "drizzle-orm";
 import { documents } from "~/drizzle/schema";
+import { createId } from "@paralleldrive/cuid2";
+import { useRef } from "react";
 
 export type SearchFormSchemaType = z.infer<typeof SearchFormSchema>;
 export const SearchFormSchema = z.object({
@@ -23,7 +25,10 @@ type SearchFormProps = {
 };
 
 export const SearchForm = ({ className }: SearchFormProps) => {
-  const fetcher = useFetcher<SearchFormActionData>({ key: "search" });
+  // This component has a key for the search param to make sure it re-renders on navigation change
+  // We use a generated ID to make sure the fetcher resets on navigation change
+  const fetcherId = useRef(createId());
+  const fetcher = useFetcher<SearchFormActionData>({ key: fetcherId.current });
 
   const [form, fields] = useForm<SearchFormSchemaType>({
     lastResult: fetcher.data?.submission,

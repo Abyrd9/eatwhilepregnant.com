@@ -5,6 +5,8 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useNavigation,
+  useParams,
 } from "@remix-run/react";
 import "./tailwind.css";
 import "@fontsource-variable/rubik/wght.css";
@@ -48,10 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { status } = useLoaderData<typeof loader>();
-  console.log(status);
-
   const { event } = usePWA();
-  console.log("Event", event);
 
   useEffect(() => {
     window.addEventListener("beforeinstallprompt", () => {
@@ -65,11 +64,15 @@ export default function App() {
     };
   }, []);
 
+  const params = useParams();
+  const navigation = useNavigation();
+  console.log(navigation.location);
+
   return (
     <div className="h-dvh w-dvw flex flex-col items-center sm:pt-[10dvh] p-4 pt-8">
       <ImageHeadings className="pb-10" />
       <div className="max-w-[500px] w-full flex flex-col items-center relative">
-        <SearchForm className="pb-0" documents={[]} />
+        <SearchForm key={params.search} className="pb-0" documents={[]} />
 
         <div className="w-full max-w-[300px] h-px bg-gray-200 my-5" />
 
