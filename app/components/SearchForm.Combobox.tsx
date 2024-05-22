@@ -26,15 +26,16 @@ export const SearchFormCombobox = ({
 
   const search = useInputControl(field);
 
-  useEffect(() => {
-    const form = new FormData();
+  // TODO: Causing a lot of reads, let's turn off for now
+  // useEffect(() => {
+  //   const form = new FormData();
 
-    suggestFetcher.submit(form, {
-      method: "POST",
-      navigate: false,
-      action: `/api/suggest?query=${search.value}`,
-    });
-  }, [search.value]);
+  //   suggestFetcher.submit(form, {
+  //     method: "POST",
+  //     navigate: false,
+  //     action: `/api/suggest?query=${search.value}`,
+  //   });
+  // }, [search.value]);
 
   const isSubmitting =
     searchFetcher.state === "submitting" || searchFetcher.state === "loading";
