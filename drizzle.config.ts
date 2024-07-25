@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 export default {
+  dialect: "sqlite",
   schema: "./app/drizzle/schema.ts",
   out: "./app/drizzle/migrations",
   driver: "turso",

@@ -1,16 +1,17 @@
-import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json, redirect } from "@remix-run/node";
 import {
+  SEARCH_FORM_INTENT,
   SearchFormActionData,
   SearchFormSchema,
 } from "~/components/SearchForm";
 import { z } from "zod";
 import { getAnthropic } from "~/utils/helpers/server/anthropic.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
-import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
 import { db } from "~/drizzle/driver.server";
 import { InferSelectModel, eq } from "drizzle-orm";
 import { documents } from "~/drizzle/schema";
+import { getRateLimiter } from "cache/rate-limiter.server";
+import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 
 const AiResponseSchema = z.array(
   z.object({
@@ -22,25 +23,39 @@ const AiResponseSchema = z.array(
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.clone().formData();
-  const data = parseWithZod(form, { schema: SearchFormSchema });
+  const parsed = parseZodFormData(form, { schema: SearchFormSchema });
 
   const ip_address = getClientIPAddress(request);
   if (ip_address) {
-    const limiter = getRateLimiter(100, 60 * 10);
+    const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
     await limiter.consume(ip_address).catch(() => {
       return json<SearchFormActionData>({
         status: "error",
-        submission: data.reply({
-          fieldErrors: {
-            search: ["You have exceeded the rate limit for this action."],
-          },
-        }),
+        intent: SEARCH_FORM_INTENT,
+        errors: {
+          global: "You have exceeded the rate limit for this action.",
+        },
       });
     });
   } else console.error("No IP address found.");
 
-  if (data.status === "success") {
-    const search = data.value.search.toLowerCase();
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
+    const IP = crypto.randomUUID();
+    const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
+    await limiter.consume(IP).catch(() => {
+      return json<SearchFormActionData>({
+        status: "error",
+        intent: SEARCH_FORM_INTENT,
+        errors: {
+          global: "You have exceeded the rate limit for this action.",
+        }
+      });
+    });
+  }
+
+  if (parsed.success) {
+    const search = parsed.data.search.toLowerCase();
 
     // Let's check to see if we can get a quick match on the search column
     // If we can, let's just return that
@@ -55,7 +70,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       const message = await anthropic.messages.create({
         max_tokens: 1024,
-        model: "claude-3-haiku-20240307",
+        model: "claude-3-sonnet-20240229",
         messages: [
           {
             role: "user",
@@ -116,20 +131,25 @@ export const action: ActionFunction = async ({ request }) => {
         ],
       });
 
+      const messageContent = message.content[0];
+      if (messageContent.type !== "text") { throw new Error("Invalid response type"); }
+      
+      
       const contents = AiResponseSchema.parse(
-        JSON.parse("[{" + message.content[0].text)
-      );
-
-      const content = contents[0];
+          JSON.parse("[{" + messageContent.text)
+        );
+        
+        const content = contents[0];
+      
+      
 
       if (content.is_safe === "undefined") {
         return json<SearchFormActionData>({
           status: "error",
-          submission: data.reply({
-            fieldErrors: {
-              search: [content.note],
-            },
-          }),
+          intent: SEARCH_FORM_INTENT,
+          errors: {
+            search: content.note,
+          },
         });
       }
 
@@ -156,8 +176,20 @@ export const action: ActionFunction = async ({ request }) => {
       console.error(error);
       return json<SearchFormActionData>({
         status: "error",
-        submission: data,
+        intent: SEARCH_FORM_INTENT,
+        errors: {
+          global: "An unexpected error occurred.",
+        },
       });
     }
   }
+
+  console.error(parsed.errors);
+  return json<SearchFormActionData>({
+    status: "error",
+    intent: SEARCH_FORM_INTENT,
+    errors: {
+      global: "An unexpected error occurred.",
+    },
+  });
 };

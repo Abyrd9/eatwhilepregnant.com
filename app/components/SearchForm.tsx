@@ -1,4 +1,3 @@
-import { getFormProps, useForm } from "@conform-to/react";
 import { useFetcher } from "@remix-run/react";
 import { z } from "zod";
 import { cx } from "~/utils/helpers/client/cx";
@@ -8,6 +7,7 @@ import { InferSelectModel } from "drizzle-orm";
 import { documents } from "~/drizzle/schema";
 import { createId } from "@paralleldrive/cuid2";
 import { useRef } from "react";
+import { useZodForm } from "~/lib/zod-form";
 
 export type SearchFormSchemaType = z.infer<typeof SearchFormSchema>;
 export const SearchFormSchema = z.object({
@@ -17,7 +17,12 @@ export const SearchFormSchema = z.object({
     .max(200),
 });
 
-export type SearchFormActionData = ActionData<SearchFormSchemaType>;
+export const SEARCH_FORM_INTENT = "SEARCH_FORM_INTENT";
+
+export type SearchFormActionData = ActionData<
+  typeof SEARCH_FORM_INTENT,
+  typeof SearchFormSchema
+>;
 
 type SearchFormProps = {
   className?: string;
@@ -29,23 +34,23 @@ export const SearchForm = ({ className }: SearchFormProps) => {
   // We use a generated ID to make sure the fetcher resets on navigation change
   const fetcherId = useRef(createId());
   const fetcher = useFetcher<SearchFormActionData>({ key: fetcherId.current });
+  const data = fetcher.data;
 
-  const [form, fields] = useForm<SearchFormSchemaType>({
-    lastResult: fetcher.data?.submission,
+  const { fields } = useZodForm({
+    schema: SearchFormSchema,
   });
 
   return (
     <fetcher.Form
-      {...getFormProps(form)}
       action="/api/search"
       method="POST"
       className={cx("w-full max-w-[400px]", className)}
     >
       <div className="w-full flex flex-col">
         <SearchFormCombobox searchFetcher={fetcher} field={fields.search} />
-        {fetcher.data?.submission.error?.search && (
+        {data?.status === "error" && data?.errors?.search && (
           <span className="ml-auto text-xs text-red-500 pt-2">
-            {fetcher.data?.submission.error?.search}
+            {data?.errors?.search}
           </span>
         )}
       </div>

@@ -1,9 +1,9 @@
-import { parseWithZod } from "@conform-to/zod";
 import {
   type ActionFunction,
   json,
   type LoaderFunction,
 } from "@remix-run/node";
+import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 import {
   commitPwaBannerSession,
   getPwaBannerSession,
@@ -21,15 +21,15 @@ export const action: ActionFunction = async ({ request }) => {
 
   switch (intent) {
     case PWA_FORM_INTENT: {
-      const submission = parseWithZod(form, { schema: PwaBannerFormSchema });
-      if (submission.status !== "success") {
-        console.error("Invalid PWA banner status:", submission.error);
+      const parsed = parseZodFormData(form, { schema: PwaBannerFormSchema });
+      if (!parsed.success) {
+        console.error("Invalid PWA banner status:", parsed.errors);
         return json({}, { status: 400 });
       }
 
       const cookie = request.headers.get("Cookie");
       const session = await getPwaBannerSession(cookie);
-      session.set("status", submission.value.status);
+      session.set("status", parsed.data.status);
 
       return json(
         {},

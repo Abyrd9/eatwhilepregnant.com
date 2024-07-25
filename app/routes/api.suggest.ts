@@ -1,9 +1,9 @@
 import { ActionFunction, json } from "@remix-run/node";
+import { getRateLimiter } from "cache/rate-limiter.server";
 import { InferSelectModel, like } from "drizzle-orm";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import { db } from "~/drizzle/driver.server";
 import { documents } from "~/drizzle/schema";
-import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
 
 export type SuggestLoaderData = {
   documents: InferSelectModel<typeof documents>[];

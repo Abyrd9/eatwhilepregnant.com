@@ -1,9 +1,24 @@
-import { type SubmissionResult } from "@conform-to/react";
+import type { z } from "zod";
 
-type Status = "ok" | "error";
-
-export type ActionData<Intent> = {
-  status: Status;
-  intent?: Intent;
-  submission: SubmissionResult;
-};
+export type ActionData<
+  Intent,
+  T extends
+    | z.ZodObject<z.ZodRawShape>
+    | z.ZodEffects<z.ZodObject<z.ZodRawShape>>
+> =
+  | {
+      status: "ok";
+      intent: Intent;
+      payload?: T["_output"];
+      errors?: never;
+    }
+  | {
+      status: "error";
+      intent: Intent;
+      payload?: never;
+      errors?: Partial<Record<keyof z.infer<T>, string>> & {
+        form?: string;
+        global?: string;
+      };
+    }
+  | undefined;

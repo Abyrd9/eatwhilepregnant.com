@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog } from "~/primitives/dialog";
 import { cx } from "~/utils/helpers/client/cx";
-import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { useFetcher } from "@remix-run/react";
 import { z } from "zod";
 import { type ActionData } from "~/utils/types/generics";
@@ -9,6 +8,7 @@ import { Button } from "~/primitives/button";
 import { Label } from "~/primitives/label";
 import { InferSelectModel } from "drizzle-orm";
 import { documents } from "~/drizzle/schema";
+import { useZodForm } from "~/lib/zod-form";
 
 export type FeedbackFormSchemaType = z.infer<typeof FeedbackFormSchema>;
 
@@ -20,7 +20,10 @@ export const FeedbackFormSchema = z.object({
 
 export const FEEDBACK_FORM_INTENT = "FEEDBACK_FORM_INTENT";
 
-export type FeedbackFormActionData = ActionData<typeof FEEDBACK_FORM_INTENT>;
+export type FeedbackFormActionData = ActionData<
+  typeof FEEDBACK_FORM_INTENT,
+  typeof FeedbackFormSchema
+>;
 
 type FeedbackProps = {
   className?: string;
@@ -33,11 +36,11 @@ export const Feedback = ({ document, className }: FeedbackProps) => {
 
   const [open, setOpen] = useState(false);
 
-  const [form, fields] = useForm<FeedbackFormSchemaType>({
-    lastResult: data?.submission,
-    defaultValue: {
+  const { fields } = useZodForm({
+    schema: FeedbackFormSchema,
+    defaultValues: {
       documentId: document.id,
-      food: document.search,
+      food: document.search ?? undefined,
     },
   });
 
@@ -79,29 +82,35 @@ export const Feedback = ({ document, className }: FeedbackProps) => {
           <Dialog.Overlay>
             <Dialog.Content>
               <Dialog.Title>Feedback</Dialog.Title>
-              <fetcher.Form
-                {...getFormProps(form)}
-                method="POST"
-                action="/api/feedback"
-              >
+              <fetcher.Form method="POST" action="/api/feedback">
                 <input
-                  {...getInputProps(fields.documentId, { type: "hidden" })}
+                  name={fields.documentId.name}
+                  value={fields.documentId.value}
+                  onChange={(e) => fields.documentId.onChange(e.target.value)}
+                  type="hidden"
                 />
-                <input {...getInputProps(fields.food, { type: "hidden" })} />
+                <input
+                  name={fields.food.name}
+                  value={fields.food.value}
+                  onChange={(e) => fields.food.onChange(e.target.value)}
+                  type="hidden"
+                />
 
                 <div className="pb-4 pt-2">
-                  <Label htmlFor={fields.feedback.id}>
+                  <Label htmlFor={fields.feedback.name}>
                     Feedback for{" "}
                     <span className="capitalize">{document.search}</span>
                   </Label>
                   <textarea
-                    {...getInputProps(fields.feedback, { type: "text" })}
+                    name={fields.feedback.name}
+                    value={fields.feedback.value}
+                    onChange={(e) => fields.feedback.onChange(e.target.value)}
                     placeholder={`What's wrong with this response?`}
                     className="w-full resize-none overflow-y-scroll h-32 p-2 rounded-md border border-slate-200 focus:border-slate-300 focus:ring focus:ring-slate-200 focus:ring-opacity-50 placeholder:text-sm text-sm"
                     maxLength={1000}
                   />
                   <p className="text-sm text-red-400">
-                    {fields.feedback.errors}
+                    {fields.feedback.error}
                   </p>
                 </div>
 

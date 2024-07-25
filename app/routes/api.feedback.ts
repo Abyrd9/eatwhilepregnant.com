@@ -1,5 +1,5 @@
-import { parseWithZod } from "@conform-to/zod";
 import { ActionFunction, json } from "@remix-run/node";
+import { getRateLimiter } from "cache/rate-limiter.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import {
   FEEDBACK_FORM_INTENT,
@@ -8,7 +8,7 @@ import {
 } from "~/components/Feedback";
 import { db } from "~/drizzle/driver.server";
 import { feedback } from "~/drizzle/schema";
-import { getRateLimiter } from "~/utils/helpers/server/rate-limiter.server";
+import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.clone().formData();
@@ -16,7 +16,9 @@ export const action: ActionFunction = async ({ request }) => {
 
   switch (intent) {
     case FEEDBACK_FORM_INTENT: {
-      const data = parseWithZod(form, { schema: FeedbackFormSchema });
+      const parsed = parseZodFormData(form, {
+        schema: FeedbackFormSchema,
+      });
 
       const ip_address = getClientIPAddress(request);
       if (ip_address) {
@@ -25,13 +27,10 @@ export const action: ActionFunction = async ({ request }) => {
           return json<FeedbackFormActionData>(
             {
               status: "error",
-              submission: data.reply({
-                fieldErrors: {
-                  feedback: [
-                    "You have exceeded the rate limit for this action.",
-                  ],
-                },
-              }),
+              intent: FEEDBACK_FORM_INTENT,
+              errors: {
+                global: "You have exceeded the rate limit for this action.",
+              },
             },
             {
               status: 429,
@@ -41,12 +40,12 @@ export const action: ActionFunction = async ({ request }) => {
         });
       } else console.error("No IP address found.");
 
-      if (data.status !== "success") {
+      if (!parsed.success) {
         return json<FeedbackFormActionData>(
           {
             status: "error",
             intent: FEEDBACK_FORM_INTENT,
-            submission: data.reply(),
+            errors: parsed.errors,
           },
           { status: 500 }
         );
@@ -54,16 +53,16 @@ export const action: ActionFunction = async ({ request }) => {
 
       try {
         await db.insert(feedback).values({
-          document_id: data.value.documentId,
-          food: data.value.food,
-          feedback: data.value.feedback,
+          document_id: parsed.data.documentId,
+          food: parsed.data.food,
+          feedback: parsed.data.feedback,
         });
 
         return json<FeedbackFormActionData>(
           {
             status: "ok",
             intent: FEEDBACK_FORM_INTENT,
-            submission: data.reply(),
+            payload: parsed.data,
           },
           { status: 200 }
         );
@@ -73,11 +72,9 @@ export const action: ActionFunction = async ({ request }) => {
           {
             status: "error",
             intent: FEEDBACK_FORM_INTENT,
-            submission: data.reply({
-              fieldErrors: {
-                feedback: ["There was an error submitting your feedback."],
-              },
-            }),
+            errors: {
+              feedback: "There was an error submitting your feedback.",
+            },
           },
           { status: 500 }
         );
