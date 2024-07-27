@@ -1,14 +1,14 @@
 import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json, useLoaderData, useParams } from "@remix-run/react";
-import { InferSelectModel, eq } from "drizzle-orm";
+import { type InferSelectModel, eq } from "drizzle-orm";
 import { Disclaimer } from "~/components/Disclaimer";
 import { Feedback } from "~/components/Feedback";
 import { Footer } from "~/components/Footer";
 import { ImageHeadings } from "~/components/ImageHeadings";
 import { Result } from "~/components/Result";
 import { SearchForm } from "~/components/SearchForm";
-import { db } from "~/drizzle/driver.server";
-import { documents } from "~/drizzle/schema";
+import { db } from "~/database/db.server";
+import { documents } from "~/database/schema";
 
 type LoaderData = {
   document: InferSelectModel<typeof documents>;
@@ -49,7 +49,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const document = data.document as LoaderData["document"];
   return [
-    { title: document.search + " | eatwhilepregnant.com" },
+    { title: `${document.search} | eatwhilepregnant.com` },
     {
       name: "description",
       content: `Is it okay for a pregnant woman to eat ${document.search}?`,

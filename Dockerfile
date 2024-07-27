@@ -20,18 +20,17 @@ RUN apt-get update -qq && \
     apt-get install -y python-is-python3 pkg-config build-essential 
 
 # Install node modules
-COPY --link package.json package-lock.json .
+COPY --link package.json package-lock.json ./
 RUN npm install --production=false
 
 # Copy application code
-COPY --link . .
+COPY --link . ./
 
 # Build application
 RUN npm run build
 
 # Remove development dependencies
 RUN npm prune --production
-
 
 # Final stage for app image
 FROM base
@@ -40,4 +39,4 @@ FROM base
 COPY --from=build /app /app
 
 # Start the server by default, this can be overwritten at runtime
-ENTRYPOINT [ "./start.sh" ]
+ENTRYPOINT ["npm", "run", "start"]

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiInfo } from "react-icons/fi";
 import { Dialog } from "~/primitives/dialog";
-import { cx } from "~/utils/helpers/client/cx";
+import { cx } from "~/utils/helpers/cx";
 
 export const Disclaimer = () => {
   const [open, setOpen] = useState(false);
@@ -17,6 +17,7 @@ export const Disclaimer = () => {
           The information on this website is not medical advice. Please read our
           full{" "}
           <button
+            type="button"
             onClick={() => setOpen(true)}
             className="underline cursor-pointer inline"
           >

@@ -1,7 +1,7 @@
 import * as RadixDialog from "@radix-ui/react-dialog";
 import React from "react";
 import { LuX } from "react-icons/lu";
-import { cx } from "~/utils/helpers/client/cx";
+import { cx } from "~/utils/helpers/cx";
 
 const DialogRoot = RadixDialog.Root;
 const DialogPortal = RadixDialog.Portal;

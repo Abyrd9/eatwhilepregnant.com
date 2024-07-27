@@ -1,6 +1,6 @@
-import { ComponentPropsWithoutRef } from "react";
-import { cx } from "~/utils/helpers/client/cx";
+import type { ComponentPropsWithoutRef } from "react";
 import logo from "~/images/logo.png";
+import { cx } from "~/utils/helpers/cx";
 
 type ImageHeadingsProps = ComponentPropsWithoutRef<"div">;
 

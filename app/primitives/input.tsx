@@ -1,5 +1,5 @@
 import React from "react";
-import { cx } from "~/utils/helpers/client/cx";
+import { cx } from "~/utils/helpers/cx";
 
 export type InputProps = React.ComponentPropsWithoutRef<"input">;
 
@@ -36,7 +36,7 @@ const Field = React.forwardRef<HTMLInputElement, InputProps>(
   }
 );
 
-const Error = React.forwardRef<
+const FieldError = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<"p">
 >(({ className, ...props }, ref) => (
@@ -59,5 +59,5 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 export const InputComposer = Object.assign(Composer, {
   Input: Field,
-  Error: Error,
+  Error: FieldError,
 });

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
-import { DeepPartial } from "~/utils/types/deep-partial";
+import type { DeepPartial } from "~/utils/types/deep-partial";
 import { flattenZodFormData } from "./flatten-zod-form-data";
 import { unflattenZodFormData } from "./unflatten-zod-form-data";
 

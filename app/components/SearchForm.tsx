@@ -1,13 +1,13 @@
-import { useFetcher } from "@remix-run/react";
-import { z } from "zod";
-import { cx } from "~/utils/helpers/client/cx";
-import { ActionData } from "~/utils/types/generics";
-import { SearchFormCombobox } from "./SearchForm.Combobox";
-import { InferSelectModel } from "drizzle-orm";
-import { documents } from "~/drizzle/schema";
 import { createId } from "@paralleldrive/cuid2";
+import { useFetcher } from "@remix-run/react";
+import type { InferSelectModel } from "drizzle-orm";
 import { useRef } from "react";
+import { z } from "zod";
+import type { documents } from "~/database/schema";
 import { useZodForm } from "~/lib/zod-form";
+import { cx } from "~/utils/helpers/cx";
+import type { ActionData } from "~/utils/types/generics";
+import { SearchFormCombobox } from "./SearchForm.Combobox";
 
 export type SearchFormSchemaType = z.infer<typeof SearchFormSchema>;
 export const SearchFormSchema = z.object({

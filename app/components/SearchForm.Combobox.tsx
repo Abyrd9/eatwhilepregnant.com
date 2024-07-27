@@ -1,17 +1,10 @@
-import {
-  Combobox,
-  ComboboxItem,
-  ComboboxLabel,
-  ComboboxPopover,
-  ComboboxProvider,
-} from "@ariakit/react";
-import { FiCornerDownLeft, FiLoader, FiSearch } from "react-icons/fi";
-import { cx } from "~/utils/helpers/client/cx";
+import { Combobox, ComboboxLabel, ComboboxProvider } from "@ariakit/react";
+import type { FetcherWithComponents } from "@remix-run/react";
 import { useEffect, useState } from "react";
-import { SuggestLoaderData } from "~/routes/api.suggest";
-import { FetcherWithComponents, useFetcher } from "@remix-run/react";
-import { SearchFormActionData } from "./SearchForm";
-import { FieldProps } from "~/lib/zod-form";
+import { FiCornerDownLeft, FiLoader, FiSearch } from "react-icons/fi";
+import type { FieldProps } from "~/lib/zod-form";
+import { cx } from "~/utils/helpers/cx";
+import type { SearchFormActionData } from "./SearchForm";
 
 type SearchFormComboboxProps = {
   searchFetcher: FetcherWithComponents<SearchFormActionData>;

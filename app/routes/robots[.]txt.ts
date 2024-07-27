@@ -1,20 +1,25 @@
-export const loader = () => {
-  // handle "GET" request
-  // set up our text content that will be returned in the response
-  const robotText = `
-      User-agent: Googlebot
-      Disallow: /nogooglebot/
-  
-      User-agent: *
-      Allow: /
-  
-      Sitemap: https://www.eatwhilepregnant.com/sitemap.xml
-      `;
-  // return the text content, a status 200 success response, and set the content type to text/plain
-  return new Response(robotText, {
+import type { LoaderFunction } from "@remix-run/node";
+import { getDomainUrl } from "~/utils/helpers/domain-url";
+
+// A robots.txt file provides guidelines to web robots (like search engine crawlers)
+// about which parts of your website they should or should not process or scan.
+export const loader: LoaderFunction = ({ request }) => {
+  const url = getDomainUrl(request);
+
+  const robotText = `User-agent: Googlebot
+Disallow: /nogooglebot/
+
+User-agent: *
+Allow: /
+
+Sitemap: ${url}/sitemap.xml
+`;
+
+  return new Response(robotText.trim(), {
     status: 200,
     headers: {
       "Content-Type": "text/plain",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 };

@@ -1,17 +1,17 @@
-import { ActionFunction, json, redirect } from "@remix-run/node";
+import { type ActionFunction, json, redirect } from "@remix-run/node";
+import { getRateLimiter } from "cache/rate-limiter.server";
+import { type InferSelectModel, eq } from "drizzle-orm";
+import { getClientIPAddress } from "remix-utils/get-client-ip-address";
+import { z } from "zod";
 import {
   SEARCH_FORM_INTENT,
-  SearchFormActionData,
+  type SearchFormActionData,
   SearchFormSchema,
 } from "~/components/SearchForm";
-import { z } from "zod";
-import { getAnthropic } from "~/utils/helpers/server/anthropic.server";
-import { getClientIPAddress } from "remix-utils/get-client-ip-address";
-import { db } from "~/drizzle/driver.server";
-import { InferSelectModel, eq } from "drizzle-orm";
-import { documents } from "~/drizzle/schema";
-import { getRateLimiter } from "cache/rate-limiter.server";
+import { db } from "~/database/db.server";
+import { documents } from "~/database/schema";
 import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
+import { getAnthropic } from "~/utils/helpers/anthropic.server";
 
 const AiResponseSchema = z.array(
   z.object({
@@ -49,7 +49,7 @@ export const action: ActionFunction = async ({ request }) => {
         intent: SEARCH_FORM_INTENT,
         errors: {
           global: "You have exceeded the rate limit for this action.",
-        }
+        },
       });
     });
   }
@@ -132,16 +132,15 @@ export const action: ActionFunction = async ({ request }) => {
       });
 
       const messageContent = message.content[0];
-      if (messageContent.type !== "text") { throw new Error("Invalid response type"); }
-      
-      
+      if (messageContent.type !== "text") {
+        throw new Error("Invalid response type");
+      }
+
       const contents = AiResponseSchema.parse(
-          JSON.parse("[{" + messageContent.text)
-        );
-        
-        const content = contents[0];
-      
-      
+        JSON.parse(`[{${messageContent.text}`)
+      );
+
+      const content = contents[0];
 
       if (content.is_safe === "undefined") {
         return json<SearchFormActionData>({

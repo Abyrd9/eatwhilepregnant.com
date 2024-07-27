@@ -1,8 +1,8 @@
-import { cx } from "~/utils/helpers/client/cx";
-import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
+import type { InferSelectModel } from "drizzle-orm";
 import { useRef } from "react";
-import { InferSelectModel } from "drizzle-orm";
-import { documents } from "~/drizzle/schema";
+import { FiAlertTriangle, FiCheckCircle, FiXOctagon } from "react-icons/fi";
+import type { documents } from "~/database/schema";
+import { cx } from "~/utils/helpers/cx";
 
 type ResultProps = {
   className?: string;
@@ -44,12 +44,12 @@ export const Result = ({ className, document }: ResultProps) => {
             {document.is_safe === "1"
               ? "safe to eat"
               : document.is_safe === "2"
-                ? "eat with caution"
-                : document.is_safe === "3"
-                  ? "eat with caution"
-                  : document.is_safe === "4"
-                    ? "do not eat"
-                    : null}
+              ? "eat with caution"
+              : document.is_safe === "3"
+              ? "eat with caution"
+              : document.is_safe === "4"
+              ? "do not eat"
+              : null}
           </span>
         </div>
       )}

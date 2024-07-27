@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import React, { forwardRef } from "react";
 import { LuLoader } from "react-icons/lu";
-import { cx } from "~/utils/helpers/client/cx";
+import { cx } from "~/utils/helpers/cx";
 
 export type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   isLoading?: boolean;

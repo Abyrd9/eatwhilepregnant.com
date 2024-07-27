@@ -46,17 +46,17 @@ class RateLimiter {
         remainingPoints: entry.points,
         msBeforeNext: entry.resetTime - now,
       };
-    } else {
-      const newEntry: RateLimitCacheEntry = {
-        points: this.points - 1,
-        resetTime: now + this.duration * 1000,
-      };
-      this.cache.set(key, newEntry);
-      return {
-        remainingPoints: newEntry.points,
-        msBeforeNext: this.duration * 1000,
-      };
     }
+
+    const newEntry: RateLimitCacheEntry = {
+      points: this.points - 1,
+      resetTime: now + this.duration * 1000,
+    };
+    this.cache.set(key, newEntry);
+    return {
+      remainingPoints: newEntry.points,
+      msBeforeNext: this.duration * 1000,
+    };
   }
 
   getMetrics() {

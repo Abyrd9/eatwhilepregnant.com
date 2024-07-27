@@ -1,17 +1,14 @@
 import {
   type ActionFunction,
-  json,
   type LoaderFunction,
+  json,
 } from "@remix-run/node";
 import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 import {
   commitPwaBannerSession,
   getPwaBannerSession,
 } from "~/utils/cookies/pwa-banner-cookie.server";
-import {
-  PWA_FORM_INTENT,
-  PwaBannerFormSchema,
-} from "~/utils/helpers/client/pwa";
+import { PWA_FORM_INTENT, PwaBannerFormSchema } from "~/utils/helpers/pwa";
 
 export const loader: LoaderFunction = () => json({}, { status: 404 });
 

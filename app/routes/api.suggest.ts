@@ -1,9 +1,9 @@
-import { ActionFunction, json } from "@remix-run/node";
+import { type ActionFunction, json } from "@remix-run/node";
 import { getRateLimiter } from "cache/rate-limiter.server";
-import { InferSelectModel, like } from "drizzle-orm";
+import { type InferSelectModel, like } from "drizzle-orm";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
-import { db } from "~/drizzle/driver.server";
-import { documents } from "~/drizzle/schema";
+import { db } from "~/database/db.server";
+import { documents } from "~/database/schema";
 
 export type SuggestLoaderData = {
   documents: InferSelectModel<typeof documents>[];
@@ -12,7 +12,7 @@ export type SuggestLoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   const ip_address = getClientIPAddress(request);
   if (ip_address) {
-    const limiter = getRateLimiter(100, 60 * 5);
+    const limiter = getRateLimiter("suggest", 100, 60 * 5);
     await limiter.consume(ip_address).catch(() => {
       return json<SuggestLoaderData>(
         {

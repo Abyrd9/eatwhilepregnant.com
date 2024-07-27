@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Dialog } from "~/primitives/dialog";
-import { cx } from "~/utils/helpers/client/cx";
 import { useFetcher } from "@remix-run/react";
+import type { InferSelectModel } from "drizzle-orm";
+import { useEffect, useState } from "react";
 import { z } from "zod";
-import { type ActionData } from "~/utils/types/generics";
-import { Button } from "~/primitives/button";
-import { Label } from "~/primitives/label";
-import { InferSelectModel } from "drizzle-orm";
-import { documents } from "~/drizzle/schema";
+import type { documents } from "~/database/schema";
 import { useZodForm } from "~/lib/zod-form";
+import { Button } from "~/primitives/button";
+import { Dialog } from "~/primitives/dialog";
+import { Label } from "~/primitives/label";
+import { cx } from "~/utils/helpers/cx";
+import type { ActionData } from "~/utils/types/generics";
 
 export type FeedbackFormSchemaType = z.infer<typeof FeedbackFormSchema>;
 
@@ -53,7 +53,7 @@ export const Feedback = ({ document, className }: FeedbackProps) => {
       sessionStorage.setItem(`feedback-${document.id}`, "true");
       setOpen(false);
     }
-  }, [data]);
+  }, [data, document.id]);
 
   const hasGivenFeedback =
     typeof window !== "undefined" &&
@@ -69,6 +69,7 @@ export const Feedback = ({ document, className }: FeedbackProps) => {
         <div className={cx("w-full text-sm text-slate-500", className)}>
           Concerned with this response?{" "}
           <button
+            type="button"
             onClick={() => setOpen(true)}
             className="text-blue-500 underline"
           >

@@ -1,13 +1,13 @@
-import { ActionFunction, json } from "@remix-run/node";
+import { type ActionFunction, json } from "@remix-run/node";
 import { getRateLimiter } from "cache/rate-limiter.server";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import {
   FEEDBACK_FORM_INTENT,
-  FeedbackFormActionData,
+  type FeedbackFormActionData,
   FeedbackFormSchema,
 } from "~/components/Feedback";
-import { db } from "~/drizzle/driver.server";
-import { feedback } from "~/drizzle/schema";
+import { db } from "~/database/db.server";
+import { feedback } from "~/database/schema";
 import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -22,7 +22,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       const ip_address = getClientIPAddress(request);
       if (ip_address) {
-        const limiter = getRateLimiter(5, 60 * 60);
+        const limiter = getRateLimiter("feedback", 5, 60 * 60);
         await limiter.consume(ip_address).catch(() => {
           return json<FeedbackFormActionData>(
             {
@@ -81,7 +81,7 @@ export const action: ActionFunction = async ({ request }) => {
       }
     }
     default:
-      console.error(`Unknown intent: intent`);
+      console.error(`Unknown intent: ${intent}`);
       break;
   }
 };

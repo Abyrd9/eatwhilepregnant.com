@@ -1,8 +1,6 @@
 {
-  "version": "5",
+  "version": "6",
   "dialect": "sqlite",
-  "id": "82de7759-23f7-4b5c-8e6d-75176b2988cd",
-  "prevId": "4080cb18-e128-4afa-951f-be9227fb75fe",
   "tables": {
     "documents": {
       "name": "documents",
@@ -102,15 +100,15 @@
         "feedback_document_id_documents_id_fk": {
           "name": "feedback_document_id_documents_id_fk",
           "tableFrom": "feedback",
-          "tableTo": "documents",
           "columnsFrom": [
             "document_id"
           ],
+          "tableTo": "documents",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -119,8 +117,9 @@
   },
   "enums": {},
   "_meta": {
-    "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "82de7759-23f7-4b5c-8e6d-75176b2988cd",
+  "prevId": "4080cb18-e128-4afa-951f-be9227fb75fe"
 }
