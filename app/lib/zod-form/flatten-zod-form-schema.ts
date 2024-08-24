@@ -1,31 +1,48 @@
 import { z } from "zod";
 
-export function flattenZodFormSchema<T extends z.ZodRawShape>(
-  schema: z.ZodObject<T>
-): z.ZodObject<z.ZodRawShape> {
-  const flattenedSchemaMap = new Map<string, z.ZodTypeAny>();
+export function flattenZodFormSchema<
+	T extends
+		| z.ZodObject<z.ZodRawShape>
+		| z.ZodEffects<z.ZodObject<z.ZodRawShape>>,
+>(schema: T): z.ZodObject<z.ZodRawShape> {
+	const flattenedSchemaMap = new Map<string, z.ZodTypeAny>();
 
-  function flattenSchema(subSchema: z.ZodTypeAny, prefix = ""): void {
-    if (subSchema instanceof z.ZodObject) {
-      for (const [key, value] of Object.entries(subSchema.shape)) {
-        const newPrefix = prefix ? `${prefix}.${key}` : key;
-        flattenSchema(value as z.ZodTypeAny, newPrefix);
-      }
-    } else if (subSchema instanceof z.ZodArray) {
-      flattenSchema(subSchema.element, `${prefix}.#`);
-    } else if (
-      subSchema instanceof z.ZodUnion ||
-      subSchema instanceof z.ZodDiscriminatedUnion
-    ) {
-      subSchema.options.forEach((option: z.ZodTypeAny, index: number) => {
-        flattenSchema(option, `${prefix}`);
-      });
-    } else {
-      flattenedSchemaMap.set(prefix, subSchema);
-    }
-  }
+	function flatten(subSchema: z.ZodTypeAny, prefix = "") {
+		let currentSubSchema = subSchema;
+		if (currentSubSchema instanceof z.ZodEffects) {
+			currentSubSchema = currentSubSchema.innerType();
+		}
 
-  flattenSchema(schema);
+		if (currentSubSchema instanceof z.ZodObject) {
+			for (const [key, value] of Object.entries(currentSubSchema.shape)) {
+				const newPrefix = prefix ? `${prefix}.${key}` : key;
+				flatten(value as z.ZodTypeAny, newPrefix);
+			}
+		} else if (currentSubSchema instanceof z.ZodArray) {
+			flatten(currentSubSchema.element, `${prefix}.#`);
+		} else if (
+			currentSubSchema instanceof z.ZodUnion ||
+			currentSubSchema instanceof z.ZodDiscriminatedUnion
+		) {
+			currentSubSchema.options.forEach(
+				(option: z.ZodTypeAny, index: number) => {
+					flatten(option, `${prefix}`);
+				},
+			);
+		} else if (currentSubSchema instanceof z.ZodLazy) {
+			const lazyValue = currentSubSchema._def.getter();
+			flatten(lazyValue, prefix);
+		} else if (currentSubSchema instanceof z.ZodOptional) {
+			const inner = currentSubSchema._def.innerType;
+			flatten(inner, prefix);
+		} else if (currentSubSchema instanceof z.ZodRecord) {
+			flatten(currentSubSchema._def.valueType, `${prefix}.*`);
+		} else {
+			flattenedSchemaMap.set(prefix, subSchema);
+		}
+	}
 
-  return z.object(Object.fromEntries(flattenedSchemaMap));
+	flatten(schema);
+
+	return z.object(Object.fromEntries(flattenedSchemaMap));
 }

@@ -4,9 +4,9 @@ import { type InferSelectModel, eq } from "drizzle-orm";
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 import { z } from "zod";
 import {
-  SEARCH_FORM_INTENT,
-  type SearchFormActionData,
-  SearchFormSchema,
+	SEARCH_FORM_INTENT,
+	type SearchFormActionData,
+	SearchFormSchema,
 } from "~/components/SearchForm";
 import { db } from "~/database/db.server";
 import { documents } from "~/database/schema";
@@ -14,67 +14,67 @@ import { parseZodFormData } from "~/lib/zod-form/parse-zod-form-data";
 import { getAnthropic } from "~/utils/helpers/anthropic.server";
 
 const AiResponseSchema = z.array(
-  z.object({
-    food: z.string(),
-    is_safe: z.coerce.string(z.enum(["1", "2", "3", "4", "undefined"])),
-    note: z.string(),
-  })
+	z.object({
+		food: z.string(),
+		is_safe: z.coerce.string(z.enum(["1", "2", "3", "4", "undefined"])),
+		note: z.string(),
+	}),
 );
 
 export const action: ActionFunction = async ({ request }) => {
-  const form = await request.clone().formData();
-  const parsed = parseZodFormData(form, { schema: SearchFormSchema });
+	const form = await request.clone().formData();
+	const parsed = parseZodFormData(form, { schema: SearchFormSchema });
 
-  const ip_address = getClientIPAddress(request);
-  if (ip_address) {
-    const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
-    await limiter.consume(ip_address).catch(() => {
-      return json<SearchFormActionData>({
-        status: "error",
-        intent: SEARCH_FORM_INTENT,
-        errors: {
-          global: "You have exceeded the rate limit for this action.",
-        },
-      });
-    });
-  } else console.error("No IP address found.");
+	const ip_address = getClientIPAddress(request);
+	if (ip_address) {
+		const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
+		await limiter.consume(ip_address).catch(() => {
+			return json<SearchFormActionData>({
+				status: "error",
+				intent: SEARCH_FORM_INTENT,
+				errors: {
+					global: "You have exceeded the rate limit for this action.",
+				},
+			});
+		});
+	} else console.error("No IP address found.");
 
-  const isDev = process.env.NODE_ENV === "development";
-  if (isDev) {
-    const IP = crypto.randomUUID();
-    const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
-    await limiter.consume(IP).catch(() => {
-      return json<SearchFormActionData>({
-        status: "error",
-        intent: SEARCH_FORM_INTENT,
-        errors: {
-          global: "You have exceeded the rate limit for this action.",
-        },
-      });
-    });
-  }
+	const isDev = process.env.NODE_ENV === "development";
+	if (isDev) {
+		const IP = crypto.randomUUID();
+		const limiter = getRateLimiter("search", 100, 60 * 10, 10000);
+		await limiter.consume(IP).catch(() => {
+			return json<SearchFormActionData>({
+				status: "error",
+				intent: SEARCH_FORM_INTENT,
+				errors: {
+					global: "You have exceeded the rate limit for this action.",
+				},
+			});
+		});
+	}
 
-  if (parsed.success) {
-    const search = parsed.data.search.toLowerCase();
+	if (parsed.success) {
+		const search = parsed.data.search.toLowerCase();
 
-    // Let's check to see if we can get a quick match on the search column
-    // If we can, let's just return that
-    const column = await db.query.documents.findFirst({
-      where: eq(documents.search, search),
-    });
+		// Let's check to see if we can get a quick match on the search column
+		// If we can, let's just return that
+		const column = await db.query.documents.findFirst({
+			where: eq(documents.search, search),
+		});
 
-    if (column) return redirect(`/${column.search}`);
+		if (column) return redirect(`/${column.search}`);
 
-    try {
-      const anthropic = await getAnthropic();
+		try {
+			const anthropic = await getAnthropic();
 
-      const message = await anthropic.messages.create({
-        max_tokens: 1024,
-        model: "claude-3-sonnet-20240229",
-        messages: [
-          {
-            role: "user",
-            content: `
+			const message = await anthropic.messages.create({
+				max_tokens: 1024,
+				model: "claude-3-sonnet-20240229",
+				messages: [
+					{
+						role: "user",
+						content: `
               You are an OBGYN and a patient is asking you about food. From the sentence that you get, you need to extract all food items and return a JSON array of objects, where each object represents a single food item.
 
               For each food item, create an object with the following keys:
@@ -123,72 +123,72 @@ export const action: ActionFunction = async ({ request }) => {
               ]
               
               Here is the patient's question/query: ${search}`,
-          },
-          {
-            role: "assistant",
-            content: "[{",
-          },
-        ],
-      });
+					},
+					{
+						role: "assistant",
+						content: "[{",
+					},
+				],
+			});
 
-      const messageContent = message.content[0];
-      if (messageContent.type !== "text") {
-        throw new Error("Invalid response type");
-      }
+			const messageContent = message.content[0];
+			if (messageContent.type !== "text") {
+				throw new Error("Invalid response type");
+			}
 
-      const contents = AiResponseSchema.parse(
-        JSON.parse(`[{${messageContent.text}`)
-      );
+			const contents = AiResponseSchema.parse(
+				JSON.parse(`[{${messageContent.text}`),
+			);
 
-      const content = contents[0];
+			const content = contents[0];
 
-      if (content.is_safe === "undefined") {
-        return json<SearchFormActionData>({
-          status: "error",
-          intent: SEARCH_FORM_INTENT,
-          errors: {
-            search: content.note,
-          },
-        });
-      }
+			if (content.is_safe === "undefined") {
+				return json<SearchFormActionData>({
+					status: "error",
+					intent: SEARCH_FORM_INTENT,
+					errors: {
+						search: content.note,
+					},
+				});
+			}
 
-      // Let's check if the word that was pulled out is a food item we already have in the DB
-      const existing = await db.query.documents.findFirst({
-        where: eq(documents.search, content.food.toLowerCase()),
-      });
+			// Let's check if the word that was pulled out is a food item we already have in the DB
+			const existing = await db.query.documents.findFirst({
+				where: eq(documents.search, content.food.toLowerCase()),
+			});
 
-      if (existing) return redirect(`/${existing.search}`);
+			if (existing) return redirect(`/${existing.search}`);
 
-      const [document] = await db
-        .insert(documents)
-        .values({
-          search: content.food.toLowerCase(),
-          content: content.note,
-          is_safe: content.is_safe as InferSelectModel<
-            typeof documents
-          >["is_safe"],
-        })
-        .returning();
+			const [document] = await db
+				.insert(documents)
+				.values({
+					search: content.food.toLowerCase(),
+					content: content.note,
+					is_safe: content.is_safe as InferSelectModel<
+						typeof documents
+					>["is_safe"],
+				})
+				.returning();
 
-      return redirect(`/${document.search}`);
-    } catch (error) {
-      console.error(error);
-      return json<SearchFormActionData>({
-        status: "error",
-        intent: SEARCH_FORM_INTENT,
-        errors: {
-          global: "An unexpected error occurred.",
-        },
-      });
-    }
-  }
+			return redirect(`/${document.search}`);
+		} catch (error) {
+			console.error(error);
+			return json<SearchFormActionData>({
+				status: "error",
+				intent: SEARCH_FORM_INTENT,
+				errors: {
+					global: "An unexpected error occurred.",
+				},
+			});
+		}
+	}
 
-  console.error(parsed.errors);
-  return json<SearchFormActionData>({
-    status: "error",
-    intent: SEARCH_FORM_INTENT,
-    errors: {
-      global: "An unexpected error occurred.",
-    },
-  });
+	console.error(parsed.errors);
+	return json<SearchFormActionData>({
+		status: "error",
+		intent: SEARCH_FORM_INTENT,
+		errors: {
+			global: "An unexpected error occurred.",
+		},
+	});
 };

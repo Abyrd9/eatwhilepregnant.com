@@ -1,0 +1,67 @@
+# Railway.toml Configuration File
+
+# Build Configuration
+[build]
+# Choose the builder for your deployment
+# Options: "NIXPACKS", "DOCKERFILE", "HEROKU", "PAKETO"
+builder = "NIXPACKS"
+
+# Specify patterns to trigger deploys (optional)
+# watchPatterns = ["src/**", "public/**"]
+
+# Custom build command for Nixpacks (optional)
+# buildCommand = "npm run build"
+
+# Build environment version (optional)
+# buildEnvironment = "V2"
+
+# Path to custom Dockerfile (optional)
+# dockerfilePath = "./Dockerfile"
+
+# Path to custom Nixpacks config (optional)
+# nixpacksConfigPath = "./nixpacks.toml"
+
+# Specify Nixpacks version (experimental, use with caution)
+# nixpacksVersion = "1.2.3"
+
+# Custom Nixpacks plan (optional, advanced usage)
+# [build.nixpacksPlan]
+# providers = []
+# [build.nixpacksPlan.phases]
+# ... (add custom phases here)
+
+# Deploy Configuration
+[deploy]
+# Command to start your application
+startCommand = "npm run start"
+
+# Number of instances to run (1-50)
+numReplicas = 1
+
+# Path for health checks
+healthcheckPath = "/api/healthcheck"
+
+# Timeout for health checks in seconds
+healthcheckTimeout = 30
+
+# Stop application when inactive (optional)
+# sleepApplication = false
+
+# Deployment runtime
+# Options: "UNSPECIFIED", "LEGACY", "V2"
+runtime = "V2"
+
+# Restart policy configuration
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+# Cron schedule for periodic runs (optional)
+# cronSchedule = "0 * * * *"
+
+# Deployment region (Pro plan only)
+# region = "us-east-1"
+
+# Private Docker registry credentials (Pro plan only)
+# [deploy.registryCredentials]
+# username = "your_username"
+# password = "your_password"

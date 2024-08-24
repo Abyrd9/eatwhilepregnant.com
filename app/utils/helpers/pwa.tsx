@@ -92,8 +92,11 @@ export const PwaProvider = ({ status, children }: PwaProviderProps) => {
     window.addEventListener("appinstalled", handleOnAppInstalled);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", () => {});
-      window.removeEventListener("appinstalled", () => {});
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleOnBeforeInstallPrompt
+      );
+      window.removeEventListener("appinstalled", handleOnAppInstalled);
     };
   });
 
