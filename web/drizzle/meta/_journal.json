@@ -1,0 +1,27 @@
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1713553633475,
+      "tag": "0000_young_goliath",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1713557658321,
+      "tag": "0001_yielding_the_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1726692821798,
+      "tag": "0002_fresh_micromax",
+      "breakpoints": true
+    }
+  ]
+}

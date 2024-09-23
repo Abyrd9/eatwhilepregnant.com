@@ -1,1 +1,0 @@
-CREATE INDEX `search_idx` ON `documents` (`search`);
