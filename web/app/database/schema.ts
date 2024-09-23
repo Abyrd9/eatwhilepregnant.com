@@ -11,6 +11,7 @@ export const documents = sqliteTable(
     search: text("search"),
     content: text("content"),
     is_safe: text("is_safe", { enum: ["1", "2", "3", "4"] as const }),
+    slug: text("slug"),
     created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   },
   (table) => ({

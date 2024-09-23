@@ -17,6 +17,10 @@ import ky from "ky";
 import localforage from "localforage";
 import { type documents, versions } from "~/database/schema";
 import { db } from "./database/db.server";
+import {
+  commitRetrieveDocumentsSession,
+  getRetrieveDocumentsSession,
+} from "./utils/cookies/retrieve-documents-cookie.server";
 import { getDomainUrl } from "./utils/helpers/domain-url";
 
 type Version = InferSelectModel<typeof versions>;
@@ -24,17 +28,46 @@ type Document = InferSelectModel<typeof documents>;
 
 export type RootLoaderData = {
   version?: Version | null;
-  documents: Document[];
+  documents?: Document[];
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  // Getting the latest version should be very very fast
-  // If it's not, we need to look into this
-  const version = await db.query.versions.findFirst({
-    orderBy: desc(versions.id),
-  });
+  const cookie = request.headers.get("Cookie");
+  const session = await getRetrieveDocumentsSession(cookie);
+  const shouldRetrieveDocuments = session.get("shouldRetrieveDocuments");
 
-  return json<RootLoaderData>({ version, documents: [] });
+  if (shouldRetrieveDocuments) {
+    const version = await db.query.versions.findFirst({
+      orderBy: desc(versions.id),
+    });
+
+    session.set("shouldRetrieveDocuments", false);
+    return json<RootLoaderData>(
+      { version },
+      {
+        headers: {
+          "Set-Cookie": await commitRetrieveDocumentsSession(session),
+        },
+      }
+    );
+  }
+
+  const [version, documents] = await Promise.all([
+    db.query.versions.findFirst({
+      orderBy: desc(versions.id),
+    }),
+    db.query.documents.findMany(),
+  ]);
+
+  session.set("shouldRetrieveDocuments", false);
+  return json<RootLoaderData>(
+    { version, documents },
+    {
+      headers: {
+        "Set-Cookie": await commitRetrieveDocumentsSession(session),
+      },
+    }
+  );
 };
 
 let documentsFromForage: Document[] = [];
@@ -48,12 +81,25 @@ export const clientLoader: ClientLoaderFunction = async ({
   request,
   serverLoader,
 }) => {
-  const { version } = await serverLoader<RootLoaderData>();
+  const { version, documents } = await serverLoader<RootLoaderData>();
 
-  const localCachedVersion = await localforage
-    .getItem<Version>("version")
-    .then((version) => version ?? null)
-    .catch(() => null);
+  if (documents && documents.length > 0) {
+    await localforage.setItem("documents", documents).catch(() => null);
+    await localforage.setItem("version", version).catch(() => null);
+
+    return json<RootLoaderData>({ version, documents });
+  }
+
+  const [localCachedVersion] = await Promise.all([
+    localforage
+      .getItem<Version>("version")
+      .then((version) => version ?? null)
+      .catch(() => null),
+    localforage
+      .getItem<Document[]>("documents")
+      .then((documents) => documents ?? [])
+      .catch(() => []),
+  ]);
 
   if (!localCachedVersion || !version || localCachedVersion.id !== version.id) {
     const response = await ky.get(`${getDomainUrl(request)}/api/documents`);

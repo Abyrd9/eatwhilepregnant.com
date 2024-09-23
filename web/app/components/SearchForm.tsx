@@ -1,12 +1,5 @@
-import {
-  Link,
-  PrefetchPageLinks,
-  useFetcher,
-  useNavigate,
-  useParams,
-} from "@remix-run/react";
+import { Link, useFetcher, useNavigate, useParams } from "@remix-run/react";
 import type { InferSelectModel } from "drizzle-orm";
-import localforage from "localforage";
 import { matchSorter } from "match-sorter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCornerDownLeft, FiLoader, FiSearch } from "react-icons/fi";
@@ -16,13 +9,6 @@ import { useZodForm } from "~/lib/zod-form";
 import { Label } from "~/primitives/label";
 import { cx } from "~/utils/helpers/cx";
 import type { ActionData } from "~/utils/types/generics";
-
-let documentsFromForage: Documents = [];
-(async () => {
-  if (typeof window === "undefined") return;
-  const documents = await localforage.getItem<Documents>("documents");
-  if (documents) documentsFromForage = documents;
-})();
 
 export type SearchFormSchemaType = z.infer<typeof SearchFormSchema>;
 export const SearchFormSchema = z.object({
@@ -57,7 +43,6 @@ export const SearchForm = ({
 
   const navigate = useNavigate();
   const params = useParams();
-  console.log(params);
 
   const { fields } = useZodForm({
     schema: SearchFormSchema,
@@ -65,15 +50,10 @@ export const SearchForm = ({
   });
 
   const documents = useMemo(() => {
-    if (!passedInDocuments && !documentsFromForage) return [];
+    if (!passedInDocuments) return [];
     if (!fields.search.value) return [];
 
-    const documentsToFilter =
-      passedInDocuments.length === 0 && documentsFromForage.length > 0
-        ? documentsFromForage
-        : passedInDocuments;
-
-    const filtered = matchSorter(documentsToFilter, fields.search.value, {
+    const filtered = matchSorter(passedInDocuments, fields.search.value, {
       keys: ["search"],
       threshold: matchSorter.rankings.STARTS_WITH,
     }).slice(0, 10);
@@ -208,7 +188,12 @@ export const SearchForm = ({
                     const value = fields.search.value;
                     if (typeof selectedSuggestionIndex === "number") {
                       const doc = documents[selectedSuggestionIndex];
-                      if (doc.search) navigate(`/${doc.search}`);
+                      if (doc.search)
+                        navigate(
+                          `/can-i-eat-${doc.search
+                            .toLowerCase()
+                            .replace(/ /g, "-")}-while-pregnant`
+                        );
                     }
 
                     if (params.search === value) return;
@@ -257,12 +242,16 @@ export const SearchForm = ({
             >
               {showSuggestionPopover &&
                 documents.map((doc) => {
+                  if (!doc.search) return null;
+
                   const isSelected =
                     selectedSuggestionIndex === documents.indexOf(doc);
                   return (
                     <Link
                       key={doc.id}
-                      to={`/${doc.search}`}
+                      to={`/can-i-eat-${doc.search
+                        .toLowerCase()
+                        .replace(/ /g, "-")}-while-pregnant`}
                       prefetch={
                         isSelected || fields.search.value === doc.search
                           ? "viewport"

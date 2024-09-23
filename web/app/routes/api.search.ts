@@ -65,7 +65,7 @@ export const action: ActionFunction = async ({ request }) => {
 
     if (column) {
       console.log("Found a column in the DB");
-      return redirect(`/${column.search}`);
+      return redirect(`/${column.slug}`);
     }
 
     try {
@@ -160,7 +160,7 @@ export const action: ActionFunction = async ({ request }) => {
         where: eq(documents.search, content.food.toLowerCase()),
       });
 
-      if (existing) return redirect(`/${existing.search}`);
+      if (existing) return redirect(`/${existing.slug}`);
 
       const document = await db.transaction(async (tx) => {
         const [[document]] = await Promise.all([
@@ -172,6 +172,9 @@ export const action: ActionFunction = async ({ request }) => {
               is_safe: content.is_safe as InferSelectModel<
                 typeof documents
               >["is_safe"],
+              slug: `can-i-eat-${content.food
+                .toLowerCase()
+                .replace(/ /g, "-")}-while-pregnant`,
             })
             .returning(),
           tx.insert(versions).values({
@@ -182,7 +185,7 @@ export const action: ActionFunction = async ({ request }) => {
         return document;
       });
 
-      return redirect(`/${document.search}`);
+      return redirect(`/${document.slug}`);
     } catch (error) {
       console.error(error);
       return json<SearchFormActionData>({
