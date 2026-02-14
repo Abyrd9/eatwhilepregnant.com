@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Abyrd9/harbor-cli/main/harbor.schema.json",
+  "before": [
+    {
+      "path": ".",
+      "command": "docker compose up -d"
+    }
+  ],
+  "services": [
+    {
+      "name": "web",
+      "path": "web",
+      "command": "npm run dev"
+    },
+    {
+      "name": "opencode",
+      "path": ".",
+      "command": "opencode . --continue"
+    }
+  ]
+}

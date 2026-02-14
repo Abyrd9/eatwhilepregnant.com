@@ -1,8 +1,6 @@
 node_modules
-/data
-/.cache
-/build
+.cache
+dist
 .env
-
-sqlite*
-sqlite.db*
+.env.local
+*.log

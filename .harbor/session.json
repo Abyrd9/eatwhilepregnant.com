@@ -1,0 +1,17 @@
+{
+  "session": "harbor",
+  "socket": "harbor-harbor",
+  "startedAt": "2026-02-12T02:05:19Z",
+  "services": {
+    "web": {
+      "window": 1,
+      "target": "harbor:1",
+      "canAccess": []
+    },
+    "opencode": {
+      "window": 2,
+      "target": "harbor:2",
+      "canAccess": []
+    }
+  }
+}

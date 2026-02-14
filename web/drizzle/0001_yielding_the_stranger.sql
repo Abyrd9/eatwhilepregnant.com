@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS `search_idx` ON `documents` (`search`);

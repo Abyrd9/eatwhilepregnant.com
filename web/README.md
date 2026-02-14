@@ -1,36 +1,64 @@
-# Welcome to Remix + Vite!
+# Eat While Pregnant (Bun Fullstack)
 
-📖 See the [Remix docs](https://remix.run/docs) and the [Remix Vite docs](https://remix.run/docs/en/main/future/vite) for details on supported features.
+Single Bun server that serves both the API and React web app. Redis is the primary data store.
 
-## Development
+## Why this shape
 
-Run the Vite dev server:
+- One runtime and one deployment unit
+- Redis-backed food records with a 30-day TTL
+- Optional Anthropic enrichment for refreshes
 
-```shellscript
-npm run dev
-```
+## Run locally
 
-## Deployment
-
-First, build your app for production:
+1. Start Redis from the repo root:
 
 ```sh
-npm run build
+docker compose up -d redis
 ```
 
-Then run the app in production mode:
+2. Install dependencies:
 
 ```sh
-npm start
+cd web
+bun install
 ```
 
-Now you'll need to pick a host to deploy it to.
+3. Run hot dev server:
 
-### DIY
+```sh
+bun run dev
+```
 
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+App defaults to `http://localhost:3000`.
 
-Make sure to deploy the output of `npm run build`
+## Environment
 
-- `build/server`
-- `build/client`
+Copy `web/.env.example` to `web/.env`.
+
+- `REDIS_URL` is required.
+- `FOOD_TTL_SECONDS` defaults to 30 days (`2592000`).
+- `ANTHROPIC_API_KEY` is optional. If missing, fallback guidance is returned and still cached.
+- `ADMIN_API_KEY` protects admin endpoints and `/admin` tools.
+
+## Admin tools
+
+- Open `/admin` in the browser.
+- Provide `ADMIN_API_KEY` to load feedback index and feedback rows.
+- Use "Force refresh selected food" to regenerate the cached food entry immediately.
+
+## Railway wiring
+
+For Railway, configure these environment variables on the service:
+
+- `PORT` (Railway usually injects this)
+- `REDIS_URL` (from Railway Redis service)
+- `FOOD_TTL_SECONDS` (optional, default `2592000`)
+- `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (optional)
+- `ADMIN_API_KEY` (required for admin APIs)
+
+## Scripts
+
+- `bun run dev` - Bun hot server
+- `bun run build` - Build web HTML bundle and server bundle to `dist/`
+- `bun run start` - Start production server
+- `bun run typecheck` - TypeScript checks
