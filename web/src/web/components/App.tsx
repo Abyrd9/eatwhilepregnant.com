@@ -200,17 +200,21 @@ export const App = () => {
 				payload.message ?? "Could not load feedback index.",
 			);
 			setAdminFoodSlugs([]);
+			setSelectedAdminFoodSlug("");
 			setAdminFeedbackItems([]);
 			return;
 		}
 
 		const nextFoodSlugs = payload.foodSlugs ?? [];
-		setAdminFoodSlugs(nextFoodSlugs);
-		setAdminStatusMessage(null);
+		const nextSelectedAdminFoodSlug = nextFoodSlugs.includes(
+			selectedAdminFoodSlug,
+		)
+			? selectedAdminFoodSlug
+			: (nextFoodSlugs[0] ?? "");
 
-		if (nextFoodSlugs.length > 0 && !selectedAdminFoodSlug) {
-			setSelectedAdminFoodSlug(nextFoodSlugs[0]);
-		}
+		setAdminFoodSlugs(nextFoodSlugs);
+		setSelectedAdminFoodSlug(nextSelectedAdminFoodSlug);
+		setAdminStatusMessage(null);
 	}, [selectedAdminFoodSlug, toAdminHeaders]);
 
 	const loadAdminFeedbackBySlug = useCallback(
