@@ -424,9 +424,9 @@ export const App = () => {
 					{adminFeedbackItems.length === 0 ? (
 						<p className="muted">No feedback rows for this slug.</p>
 					) : (
-						adminFeedbackItems.map((feedbackItem, index) => (
+						adminFeedbackItems.map((feedbackItem) => (
 							<article
-								key={`${feedbackItem.createdAt}-${index}`}
+								key={`${feedbackItem.foodSlug}-${feedbackItem.createdAt}-${feedbackItem.feedback}`}
 								className="admin-item"
 							>
 								<div className="status-label caution-text">

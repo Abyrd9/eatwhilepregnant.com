@@ -2,6 +2,7 @@ import {
 	getFoodOnlyBySlug,
 	isCanonicalFoodSlug,
 	refreshFoodBySlug,
+	toCanonicalFoodSlug,
 } from "../../core/food/food-service";
 import {
 	feedbackInputSchema,
@@ -81,13 +82,7 @@ export const handleRefreshFoodByName = async (
 		);
 	}
 
-	const foodSlug = parsedInput.data.foodName
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, "-")
-		.replace(/[^a-z0-9-]/g, "");
-
-	return handleRefreshFood(`can-i-eat-${foodSlug}-while-pregnant`);
+	return handleRefreshFood(toCanonicalFoodSlug(parsedInput.data.foodName));
 };
 
 /**
