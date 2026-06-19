@@ -50,11 +50,24 @@ export const handleAdminFeedbackIndex = async (): Promise<Response> => {
 	const redisClient = getRedisClient();
 	const foodSlugs = await redisClient.smembers("feedback:index");
 
-	const cleanedFoodSlugs = foodSlugs.sort();
+	const activeFoodSlugs: string[] = [];
+
+	for (const foodSlug of foodSlugs) {
+		const feedbackCount = await redisClient.llen(`feedback:${foodSlug}`);
+
+		if (feedbackCount > 0) {
+			activeFoodSlugs.push(foodSlug);
+			continue;
+		}
+
+		await redisClient.srem("feedback:index", foodSlug);
+	}
+
+	activeFoodSlugs.sort();
 
 	return Response.json({
 		status: "ok",
-		foodSlugs: cleanedFoodSlugs,
+		foodSlugs: activeFoodSlugs,
 	});
 };
 
