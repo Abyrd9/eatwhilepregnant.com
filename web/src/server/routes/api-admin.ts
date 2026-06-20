@@ -1,12 +1,13 @@
+import { z } from "zod";
 import { getRedisClient } from "../../core/redis-client";
+import { feedbackInputSchema } from "../../schema/food-schema";
 import { handleRefreshFood } from "./api-food";
 
-type FeedbackRecord = {
-	foodSlug: string;
-	foodName: string;
-	feedback: string;
-	createdAt: string;
-};
+const feedbackRecordSchema = feedbackInputSchema.extend({
+	createdAt: z.string().datetime(),
+});
+
+type FeedbackRecord = z.infer<typeof feedbackRecordSchema>;
 
 /**
  * Returns true when the request carries the configured admin API key.
@@ -92,7 +93,13 @@ export const handleAdminFeedbackBySlug = async (
 
 	for (const rawFeedbackItem of rawFeedbackItems) {
 		try {
-			feedbackItems.push(JSON.parse(rawFeedbackItem) as FeedbackRecord);
+			const parsedFeedbackRecord = feedbackRecordSchema.safeParse(
+				JSON.parse(rawFeedbackItem),
+			);
+
+			if (parsedFeedbackRecord.success) {
+				feedbackItems.push(parsedFeedbackRecord.data);
+			}
 		} catch {}
 	}
 

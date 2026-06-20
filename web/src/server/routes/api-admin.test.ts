@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 let foodSlugs: string[] = [];
 let feedbackCounts = new Map<string, number>();
+let feedbackItemsByKey = new Map<string, string[]>();
 let removedFoodSlugs: string[] = [];
 
 mock.module("../../core/redis-client", () => ({
 	getRedisClient: () => ({
 		smembers: async () => foodSlugs,
 		llen: async (key: string) => feedbackCounts.get(key) ?? 0,
+		lrange: async (key: string) => feedbackItemsByKey.get(key) ?? [],
 		srem: async (_key: string, foodSlug: string) => {
 			removedFoodSlugs.push(foodSlug);
 			return 1;
@@ -15,12 +17,15 @@ mock.module("../../core/redis-client", () => ({
 	}),
 }));
 
-const { handleAdminFeedbackIndex } = await import("./api-admin");
+const { handleAdminFeedbackBySlug, handleAdminFeedbackIndex } = await import(
+	"./api-admin"
+);
 
 describe("handleAdminFeedbackIndex", () => {
 	beforeEach(() => {
 		foodSlugs = [];
 		feedbackCounts = new Map();
+		feedbackItemsByKey = new Map();
 		removedFoodSlugs = [];
 	});
 
@@ -56,5 +61,48 @@ describe("handleAdminFeedbackIndex", () => {
 			foodSlugs: ["apple", "carrot"],
 		});
 		expect(removedFoodSlugs).toEqual([]);
+	});
+});
+
+describe("handleAdminFeedbackBySlug", () => {
+	beforeEach(() => {
+		feedbackItemsByKey = new Map();
+	});
+
+	test("skips malformed stored feedback rows", async () => {
+		feedbackItemsByKey = new Map([
+			[
+				"feedback:apple",
+				[
+					JSON.stringify({
+						foodSlug: "apple",
+						foodName: "apple",
+						feedback: "helpful",
+						createdAt: "2026-06-20T12:00:00.000Z",
+					}),
+					"{not-json}",
+					JSON.stringify({
+						foodSlug: "apple",
+						foodName: "apple",
+						feedback: "missing timestamp",
+					}),
+				],
+			],
+		]);
+
+		const response = await handleAdminFeedbackBySlug("apple");
+
+		expect(await response.json()).toEqual({
+			status: "ok",
+			foodSlug: "apple",
+			feedbackItems: [
+				{
+					foodSlug: "apple",
+					foodName: "apple",
+					feedback: "helpful",
+					createdAt: "2026-06-20T12:00:00.000Z",
+				},
+			],
+		});
 	});
 });
