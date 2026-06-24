@@ -2,6 +2,7 @@ import {
 	getFoodOnlyBySlug,
 	isCanonicalFoodSlug,
 } from "../../core/food/food-service";
+import { getRequestOrigin } from "../get-request-origin";
 
 const markdownCacheControlHeader = "public, max-age=0, s-maxage=300";
 const markdownContentTypeHeader = "text/markdown; charset=utf-8";
@@ -41,7 +42,7 @@ const toIsoDate = (isoDateTime: string): string => {
  */
 const toFoodMarkdownDocument = (
 	foodSlug: string,
-	requestUrl: URL,
+	origin: string,
 	foodRecord: {
 		name: string;
 		pregnancySafety: "safe" | "caution" | "avoid";
@@ -52,7 +53,7 @@ const toFoodMarkdownDocument = (
 	},
 ): string => {
 	const safetyLabel = toSafetyLabel(foodRecord.pregnancySafety);
-	const canonicalUrl = `${requestUrl.origin}/${foodSlug}`;
+	const canonicalUrl = `${origin}/${foodSlug}`;
 
 	return [
 		`# ${foodRecord.name}`,
@@ -110,12 +111,8 @@ export const handleFoodMarkdownPage = async (
 		});
 	}
 
-	const requestUrl = new URL(request.url);
-	const markdownDocument = toFoodMarkdownDocument(
-		foodSlug,
-		requestUrl,
-		foodRecord,
-	);
+	const origin = getRequestOrigin(request);
+	const markdownDocument = toFoodMarkdownDocument(foodSlug, origin, foodRecord);
 
 	return new Response(markdownDocument, {
 		status: 200,

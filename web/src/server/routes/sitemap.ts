@@ -1,4 +1,5 @@
 import { getFoodBySlug, listFoodSlugs } from "../../core/food/food-repository";
+import { getRequestOrigin } from "../get-request-origin";
 
 /**
  * Escapes XML entities for sitemap values.
@@ -16,8 +17,7 @@ const escapeXml = (value: string): string => {
  * Returns sitemap.xml with all indexed food pages.
  */
 export const handleSitemap = async (request: Request): Promise<Response> => {
-	const requestUrl = new URL(request.url);
-	const origin = requestUrl.origin;
+	const origin = getRequestOrigin(request);
 	const indexedFoodSlugs = await listFoodSlugs();
 
 	let sitemapContent =

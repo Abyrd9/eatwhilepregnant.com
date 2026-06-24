@@ -1,9 +1,10 @@
+import { getRequestOrigin } from "../get-request-origin";
+
 /**
  * Returns robots.txt for crawler directives.
  */
 export const handleRobots = (request: Request): Response => {
-	const requestUrl = new URL(request.url);
-	const origin = requestUrl.origin;
+	const origin = getRequestOrigin(request);
 
 	const robotsText = [
 		"User-agent: *",
