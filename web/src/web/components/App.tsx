@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FoodRecord } from "../../schema/food-schema";
 
 type SearchResponse = {
@@ -81,23 +81,15 @@ export const App = () => {
 		null,
 	);
 
-	const activeFoodSlug = useMemo(() => {
-		return (
-			foodRecord?.slug ?? getFoodSlugFromPathname(window.location.pathname)
-		);
-	}, [foodRecord?.slug]);
+	const activeFoodSlug =
+		foodRecord?.slug ?? getFoodSlugFromPathname(window.location.pathname);
 
-	const hasExactSuggestionMatch = useMemo(() => {
-		const normalizedSearchValue = searchValue.trim().toLowerCase();
-
-		if (!normalizedSearchValue) {
-			return false;
-		}
-
-		return suggestions.some((suggestion) => {
+	const normalizedSearchValue = searchValue.trim().toLowerCase();
+	const hasExactSuggestionMatch =
+		normalizedSearchValue.length > 0 &&
+		suggestions.some((suggestion) => {
 			return suggestion.name.trim().toLowerCase() === normalizedSearchValue;
 		});
-	}, [searchValue, suggestions]);
 
 	const toAdminHeaders = useCallback(() => {
 		const headers: Record<string, string> = {};
