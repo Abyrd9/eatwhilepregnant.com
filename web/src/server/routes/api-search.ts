@@ -1,3 +1,4 @@
+import { isCanonicalFoodSlug } from "../../core/food/food-normalization";
 import {
 	getOrRefreshFoodByName,
 	suggestFoods,
@@ -16,6 +17,18 @@ export const handleSearch = async (request: Request): Promise<Response> => {
 	if (!searchTerm) {
 		return Response.json(
 			{ status: "error", message: "Search is required." },
+			{ status: 400 },
+		);
+	}
+
+	const foodSlug = toCanonicalFoodSlug(searchTerm);
+
+	if (!isCanonicalFoodSlug(foodSlug)) {
+		return Response.json(
+			{
+				status: "error",
+				message: "Search must include letters or numbers.",
+			},
 			{ status: 400 },
 		);
 	}
@@ -46,7 +59,7 @@ export const handleSearch = async (request: Request): Promise<Response> => {
 	return Response.json({
 		status: "ok",
 		food: foodRecord,
-		slug: toCanonicalFoodSlug(searchTerm),
+		slug: foodSlug,
 		suggestions: responseSuggestions,
 	});
 };

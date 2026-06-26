@@ -1,3 +1,6 @@
+export const canonicalFoodSlugPattern =
+	/^can-i-eat-[a-z0-9]+(?:-[a-z0-9]+)*-while-pregnant$/;
+
 /**
  * Normalizes user text so lookups stay consistent across Redis keys.
  */
@@ -17,6 +20,13 @@ export const toFoodSlug = (foodName: string): string => {
 		.replace(/^-|-$/g, "");
 
 	return `can-i-eat-${slugSegment}-while-pregnant`;
+};
+
+/**
+ * Returns whether a slug matches the canonical public route shape.
+ */
+export const isCanonicalFoodSlug = (foodSlug: string): boolean => {
+	return canonicalFoodSlugPattern.test(foodSlug);
 };
 
 /**

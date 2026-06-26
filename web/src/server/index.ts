@@ -1,3 +1,4 @@
+import { isCanonicalFoodSlug } from "../core/food/food-normalization";
 import webAppHtml from "../web/index.html";
 import {
 	handleAdminFeedbackBySlug,
@@ -99,7 +100,7 @@ const handleFallbackRequest = async (request: Request): Promise<Response> => {
 		return publicAssetResponse;
 	}
 
-	if (/^\/can-i-eat-[a-z0-9-]+-while-pregnant$/.test(pathname)) {
+	if (pathname.startsWith("/") && isCanonicalFoodSlug(pathname.slice(1))) {
 		if (wantsMarkdownResponse(request)) {
 			return handleFoodMarkdownPage(request, pathname.slice(1));
 		}

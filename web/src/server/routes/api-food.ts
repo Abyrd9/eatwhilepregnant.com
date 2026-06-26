@@ -1,6 +1,6 @@
+import { isCanonicalFoodSlug } from "../../core/food/food-normalization";
 import {
 	getFoodOnlyBySlug,
-	isCanonicalFoodSlug,
 	refreshFoodBySlug,
 	toCanonicalFoodSlug,
 } from "../../core/food/food-service";
@@ -82,7 +82,19 @@ export const handleRefreshFoodByName = async (
 		);
 	}
 
-	return handleRefreshFood(toCanonicalFoodSlug(parsedInput.data.foodName));
+	const foodSlug = toCanonicalFoodSlug(parsedInput.data.foodName);
+
+	if (!isCanonicalFoodSlug(foodSlug)) {
+		return Response.json(
+			{
+				status: "error",
+				message: "Food name must include letters or numbers.",
+			},
+			{ status: 400 },
+		);
+	}
+
+	return handleRefreshFood(foodSlug);
 };
 
 /**

@@ -9,8 +9,8 @@
 		"typecheck": "bunx tsc --noEmit"
 	},
 	"dependencies": {
-		"@ai-sdk/openai": "^3.0.74",
-		"ai": "^6.0.209",
+		"@ai-sdk/openai": "^3.0.75",
+		"ai": "^6.0.211",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
 		"zod": "^4.4.3"

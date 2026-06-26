@@ -87,13 +87,6 @@ export const suggestFoods = async (
 };
 
 /**
- * Returns whether a slug is the canonical route shape.
- */
-export const isCanonicalFoodSlug = (foodSlug: string): boolean => {
-	return /^can-i-eat-[a-z0-9-]+-while-pregnant$/.test(foodSlug);
-};
-
-/**
  * Converts free text search to canonical slug.
  */
 export const toCanonicalFoodSlug = (searchTerm: string): string => {

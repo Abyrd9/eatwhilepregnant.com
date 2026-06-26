@@ -1,7 +1,5 @@
-import {
-	getFoodOnlyBySlug,
-	isCanonicalFoodSlug,
-} from "../../core/food/food-service";
+import { isCanonicalFoodSlug } from "../../core/food/food-normalization";
+import { getFoodOnlyBySlug } from "../../core/food/food-service";
 import { getRequestOrigin } from "../get-request-origin";
 
 const markdownCacheControlHeader = "public, max-age=0, s-maxage=300";

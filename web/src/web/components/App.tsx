@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { canonicalFoodSlugPattern } from "../../core/food/food-normalization";
 import type { FoodRecord } from "../../schema/food-schema";
 
 type SearchResponse = {
@@ -37,7 +38,7 @@ const getFoodSlugFromPathname = (pathname: string): string | null => {
 	}
 
 	const pathWithoutSlashes = pathname.replace(/^\//, "").replace(/\/$/, "");
-	return /^can-i-eat-[a-z0-9-]+-while-pregnant$/.test(pathWithoutSlashes)
+	return canonicalFoodSlugPattern.test(pathWithoutSlashes)
 		? pathWithoutSlashes
 		: null;
 };
