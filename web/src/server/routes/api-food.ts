@@ -135,5 +135,15 @@ export const parseFeedbackPayload = async (
 		};
 	}
 
+	if (!isCanonicalFoodSlug(parsedInput.data.foodSlug)) {
+		return {
+			success: false,
+			response: Response.json(
+				{ status: "error", message: "Invalid food slug." },
+				{ status: 400 },
+			),
+		};
+	}
+
 	return { success: true, data: parsedInput.data };
 };
