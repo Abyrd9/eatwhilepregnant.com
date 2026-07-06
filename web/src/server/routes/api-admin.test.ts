@@ -69,13 +69,23 @@ describe("handleAdminFeedbackBySlug", () => {
 		feedbackItemsByKey = new Map();
 	});
 
+	test("rejects non-canonical food slugs", async () => {
+		const response = await handleAdminFeedbackBySlug("apple");
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({
+			status: "error",
+			message: "Invalid food slug.",
+		});
+	});
+
 	test("skips malformed stored feedback rows", async () => {
 		feedbackItemsByKey = new Map([
 			[
-				"feedback:apple",
+				"feedback:can-i-eat-apple-while-pregnant",
 				[
 					JSON.stringify({
-						foodSlug: "apple",
+						foodSlug: "can-i-eat-apple-while-pregnant",
 						foodName: "apple",
 						feedback: "helpful",
 						createdAt: "2026-06-20T12:00:00.000Z",
@@ -90,14 +100,16 @@ describe("handleAdminFeedbackBySlug", () => {
 			],
 		]);
 
-		const response = await handleAdminFeedbackBySlug("apple");
+		const response = await handleAdminFeedbackBySlug(
+			"can-i-eat-apple-while-pregnant",
+		);
 
 		expect(await response.json()).toEqual({
 			status: "ok",
-			foodSlug: "apple",
+			foodSlug: "can-i-eat-apple-while-pregnant",
 			feedbackItems: [
 				{
-					foodSlug: "apple",
+					foodSlug: "can-i-eat-apple-while-pregnant",
 					foodName: "apple",
 					feedback: "helpful",
 					createdAt: "2026-06-20T12:00:00.000Z",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCanonicalFoodSlug } from "../../core/food/food-normalization";
 import { getRedisClient } from "../../core/redis-client";
 import { feedbackInputSchema } from "../../schema/food-schema";
 import { handleRefreshFood } from "./api-food";
@@ -81,6 +82,13 @@ export const handleAdminFeedbackBySlug = async (
 	if (!foodSlug) {
 		return Response.json(
 			{ status: "error", message: "foodSlug query is required." },
+			{ status: 400 },
+		);
+	}
+
+	if (!isCanonicalFoodSlug(foodSlug)) {
+		return Response.json(
+			{ status: "error", message: "Invalid food slug." },
 			{ status: 400 },
 		);
 	}

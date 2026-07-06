@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { canonicalFoodSlugPattern } from "../../core/food/food-normalization";
+import {
+	canonicalFoodSlugPattern,
+	fromFoodSlug,
+} from "../../core/food/food-normalization";
 import type { FoodRecord } from "../../schema/food-schema";
 
 type SearchResponse = {
@@ -41,13 +44,6 @@ const getFoodSlugFromPathname = (pathname: string): string | null => {
 	return canonicalFoodSlugPattern.test(pathWithoutSlashes)
 		? pathWithoutSlashes
 		: null;
-};
-
-const toReadableFoodName = (foodSlug: string): string => {
-	return foodSlug
-		.replace(/^can-i-eat-/, "")
-		.replace(/-while-pregnant$/, "")
-		.replace(/-/g, " ");
 };
 
 export const App = () => {
@@ -109,7 +105,7 @@ export const App = () => {
 		if (!response.ok || payload.status !== "ok" || !payload.food) {
 			setErrorMessage(
 				payload.message ??
-					`We do not have a fresh record for ${toReadableFoodName(foodSlug)} yet.`,
+					`We do not have a fresh record for ${fromFoodSlug(foodSlug)} yet.`,
 			);
 			setFoodRecord(null);
 			return;
@@ -660,8 +656,8 @@ export const App = () => {
 
 				{!foodRecord && activeFoodSlug ? (
 					<p className="small-note">
-						No cached entry found for {toReadableFoodName(activeFoodSlug)} yet.
-						Search it to generate a fresh record.
+						No cached entry found for {fromFoodSlug(activeFoodSlug)} yet. Search
+						it to generate a fresh record.
 					</p>
 				) : null}
 
