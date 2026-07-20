@@ -170,8 +170,9 @@ export const searchFoods = async (
 
 	const prefixKey = toFoodPrefixKey(normalizedSearchTerm);
 	let indexedSlugs = await redisClient.smembers(prefixKey);
+	const usedGlobalIndexFallback = indexedSlugs.length === 0;
 
-	if (indexedSlugs.length === 0) {
+	if (usedGlobalIndexFallback) {
 		indexedSlugs = await redisClient.smembers(foodIndexKey);
 	}
 
@@ -194,7 +195,7 @@ export const searchFoods = async (
 		}
 	}
 
-	if (matchedFoodSlugs.length > 0) {
+	if (!usedGlobalIndexFallback && matchedFoodSlugs.length > 0) {
 		await redisClient.sadd(prefixKey, ...matchedFoodSlugs);
 	}
 
