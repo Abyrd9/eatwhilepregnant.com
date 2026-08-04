@@ -98,29 +98,41 @@ export const App = () => {
 		return headers;
 	}, [adminApiKey]);
 
-	const loadFoodBySlug = useCallback(async (foodSlug: string) => {
-		const response = await fetch(`/api/food/${foodSlug}`);
-		const payload = (await response.json()) as FoodResponse;
-
-		if (!response.ok || payload.status !== "ok" || !payload.food) {
-			setErrorMessage(
-				payload.message ??
-					`We do not have a fresh record for ${fromFoodSlug(foodSlug)} yet.`,
-			);
-			setFoodRecord(null);
-			return;
-		}
-
-		setFoodRecord(payload.food);
-		setErrorMessage(null);
+	const clearFoodResultState = useCallback(() => {
+		setFoodRecord(null);
+		setSuggestions([]);
+		setShowFeedbackForm(false);
+		setFeedbackValue("");
 		setFeedbackStatus(null);
 	}, []);
+
+	const loadFoodBySlug = useCallback(
+		async (foodSlug: string) => {
+			const response = await fetch(`/api/food/${foodSlug}`);
+			const payload = (await response.json()) as FoodResponse;
+
+			if (!response.ok || payload.status !== "ok" || !payload.food) {
+				setErrorMessage(
+					payload.message ??
+						`We do not have a fresh record for ${fromFoodSlug(foodSlug)} yet.`,
+				);
+				clearFoodResultState();
+				return;
+			}
+
+			setFoodRecord(payload.food);
+			setErrorMessage(null);
+			setFeedbackStatus(null);
+		},
+		[clearFoodResultState],
+	);
 
 	const submitSearch = async (nextSearchValue: string) => {
 		const trimmedSearchValue = nextSearchValue.trim();
 
 		if (!trimmedSearchValue) {
 			setErrorMessage("Please enter a food name.");
+			clearFoodResultState();
 			return;
 		}
 
@@ -135,6 +147,7 @@ export const App = () => {
 
 			if (!response.ok || payload.status !== "ok" || !payload.food) {
 				setErrorMessage(payload.message ?? "We could not process your search.");
+				clearFoodResultState();
 				return;
 			}
 
@@ -304,10 +317,9 @@ export const App = () => {
 			const pathFoodSlug = getFoodSlugFromPathname(window.location.pathname);
 
 			if (!pathFoodSlug) {
-				setFoodRecord(null);
+				clearFoodResultState();
 				setSearchValue("");
 				setErrorMessage(null);
-				setShowFeedbackForm(false);
 				return;
 			}
 
@@ -320,7 +332,7 @@ export const App = () => {
 		return () => {
 			window.removeEventListener("popstate", loadPath);
 		};
-	}, [isAdminPage, loadFoodBySlug]);
+	}, [clearFoodResultState, isAdminPage, loadFoodBySlug]);
 
 	useEffect(() => {
 		if (!isAdminPage) {
