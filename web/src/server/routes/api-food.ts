@@ -145,5 +145,20 @@ export const parseFeedbackPayload = async (
 		};
 	}
 
+	if (
+		toCanonicalFoodSlug(parsedInput.data.foodName) !== parsedInput.data.foodSlug
+	) {
+		return {
+			success: false,
+			response: Response.json(
+				{
+					status: "error",
+					message: "foodName must match foodSlug.",
+				},
+				{ status: 400 },
+			),
+		};
+	}
+
 	return { success: true, data: parsedInput.data };
 };
