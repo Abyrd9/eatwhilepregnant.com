@@ -20,7 +20,7 @@ export const foodRefreshInputSchema = z.object({
 export const feedbackInputSchema = z.object({
 	foodSlug: z.string().min(1),
 	foodName: z.string().min(1),
-	feedback: z.string().min(1).max(1000),
+	feedback: z.string().trim().min(1).max(1000),
 });
 
 export type FoodRecord = z.infer<typeof foodRecordSchema>;
